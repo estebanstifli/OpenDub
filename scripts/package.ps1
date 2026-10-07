@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $releaseRoot = Join-Path $projectRoot 'artifacts/releases'
 if (!$PackageName) { $PackageName = "OpenDub-0.1.0-$Runtime" }
-if ($PackageName -notmatch '^[a-zA-Z0-9_-]+$') { throw 'PackageName must be a simple directory name.' }
+if ($PackageName -notmatch '^[a-zA-Z0-9][a-zA-Z0-9_.-]*$') { throw 'PackageName must be a simple directory name.' }
 $package = Join-Path $releaseRoot $PackageName
 $output = if ($Runtime -eq 'osx-arm64') { Join-Path $package 'OpenDub.app/Contents/MacOS' } else { $package }
 New-Item -ItemType Directory -Force -Path $output | Out-Null

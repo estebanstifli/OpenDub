@@ -163,7 +163,7 @@ public sealed partial class ProjectDialogs(Window owner, TextCatalog? text = nul
 
     public async Task<string?> PickFolderAsync()
     {
-        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new() { Title = text["Choose folder"], AllowMultiple = false });
+        var folders = await (owner.OwnedWindows.LastOrDefault(w => w.IsVisible) ?? owner).StorageProvider.OpenFolderPickerAsync(new() { Title = text["Choose folder"], AllowMultiple = false });
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
