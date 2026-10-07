@@ -14,6 +14,8 @@ Regeneration writes provisional WAVs under a unique `cache/tts-work/` directory.
 
 Earlier published WAVs are not immediately deleted and are not an exposed version-history feature. Pending user edits can still require regeneration before export even when the earlier audio survives a failed attempt. The target is the segment's time slot; fitting can finish outside tolerance if retries or stretch limits prevent a closer match. Logs distinguish candidate generation, duration adjustment, final measurement and operation completion; 100% is reserved for the completed operation.
 
+With IndexTTS, Generate speech now completes and saves each selected segment before starting the next, using the same fitting path as individual Regenerate and fit. A failure/cancellation in segment 2 preserves the newly finished segment 1 and the previous audio for segment 2 onward. The resident model is reused. Reference hashes/cuts are reused within the operation, and small errors within the configured time-stretch allowance bypass another TTS inference. Engines requiring translation rewrites retain grouped passes to avoid excessive model switches. This improves time to the first finished segment; total synthesis time still depends on text length and required retries.
+
 Very short segments can be expanded before synthesis where neighboring free time allows. This can change the segment's time range. If there is no free space, the range is retained and the reference context is expanded separately.
 
 ## Dynamic playback

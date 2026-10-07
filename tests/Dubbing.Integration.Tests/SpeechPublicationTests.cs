@@ -15,6 +15,37 @@ namespace Dubbing.Integration.Tests;
 public sealed class SpeechPublicationTests
 {
     [FFmpegFact]
+    public async Task SmallErrorUsesPermittedStretchWithoutRepeatingNativeSynthesis()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "speech-stretch-" + Guid.NewGuid());
+        var engine = new NearTargetSpeech(); var registry = new EngineRegistry([engine]);
+        var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
+        var media = new FFmpegMediaEngine(new ProcessRunner(NullLogger<ProcessRunner>.Instance), new RuntimeLocator(),
+            new(Environment.GetEnvironmentVariable("DUBBING_FFMPEG"), Environment.GetEnvironmentVariable("DUBBING_FFPROBE")));
+        try
+        {
+            var project = new DubbingProject { Engines = new() { Tts = "mock/tone" },
+                Settings = new() { DurationTolerance = .01, MaximumTimeStretch = .05, MaximumTtsRetries = 2 },
+                Segments = [new() { End = TimeSpan.FromSeconds(2), Translation = new("es", "Hola") }] };
+            var completed = await new GenerateSpeechService(new EngineSelectionService(registry), store, new DurationFitService(media, registry))
+                .GenerateAsync(project, root, null, default, overwriteExisting: true);
+            Assert.Equal(1, engine.Calls); Assert.Equal(0, completed.Metrics.Single().Retries);
+            Assert.NotNull(completed.Segments[0].FittedSpeech);
+            Assert.InRange(completed.Segments[0].FittedSpeech!.Duration.TotalSeconds, 1.99, 2.01);
+            Assert.Empty(Directory.GetFiles(Path.Combine(root, "cache", "tts-work"), "*", SearchOption.AllDirectories));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+    private sealed class NearTargetSpeech : ITtsEngine
+    {
+        public int Calls;
+        public EngineDescriptor Descriptor => new MockTtsEngine().Descriptor with { Capabilities = new() { SupportsSpeakingRate = true } };
+        public Task<TtsResult> SynthesizeAsync(TtsRequest request, IProgress<EngineProgress>? progress, CancellationToken ct)
+        {
+            Calls++; return new MockTtsEngine().SynthesizeAsync(request with { TargetDuration = TimeSpan.FromSeconds(2.08) }, progress, ct);
+        }
+    }
+    [FFmpegFact]
     public async Task OnlyFinalFittedAudioIsPublishedAndInterruptedAttemptsPreservePreviousAudio()
     {
         foreach (string outcome in new[] { "success", "cancel", "failure" })

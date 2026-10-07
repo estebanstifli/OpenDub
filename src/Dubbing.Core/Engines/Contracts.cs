@@ -61,6 +61,9 @@ public sealed record TtsRequest
     public required string Text { get; init; }
     public required string Language { get; init; }
     public required string OutputPath { get; init; }
+    // Optional operation-owned scratch directory. Excluded from synthesis cache keys;
+    // the caller removes it after all retries/segments finish, including cancellation.
+    public string? ReferenceCacheDirectory { get; init; }
     public string? SpeakerProfileId { get; init; }
     public AudioReference? VoiceReference { get; init; }
     public EmotionDescriptor? Emotion { get; init; }

@@ -161,17 +161,26 @@ public sealed class AudioCppTtsEngine(CatalogModel model, IAudioCppTransport tra
             }
             if (request.Seed.HasValue) body["seed"] = request.Seed.Value.ToString(CultureInfo.InvariantCulture);
             if (request.SpeakingRate.HasValue && model.Family != "index_tts2") body["speed"] = request.SpeakingRate;
-            if (request.VoiceReference is { } voice) body["voice_ref"] = await ReferenceAsync(voice, "voice", scratch, cancellationToken);
+            var referenceWatch = System.Diagnostics.Stopwatch.StartNew();
+            var preparedReferences = new Dictionary<AudioReference, string>();
+            async Task<string> PrepareReferenceAsync(AudioReference reference, string name)
+            {
+                if (preparedReferences.TryGetValue(reference, out var prepared)) return prepared;
+                prepared = await ReferenceAsync(reference, name, scratch, request.ReferenceCacheDirectory, progress, cancellationToken);
+                preparedReferences[reference] = prepared; return prepared;
+            }
+            if (request.VoiceReference is { } voice) body["voice_ref"] = await PrepareReferenceAsync(voice, "voice");
             if (request.Emotion is { } emotion)
             {
-                if (emotion.ReferenceAudio is { } audio) body[Mapping("emotionAudio")] = await ReferenceAsync(audio, "emotion", scratch, cancellationToken);
+                if (emotion.ReferenceAudio is { } audio) body[Mapping("emotionAudio")] = await PrepareReferenceAsync(audio, "emotion");
                 if (emotion.Intensity.HasValue) options[Mapping("emotionIntensity")] = emotion.Intensity;
                 if (emotion.Mode == EmotionMode.Label) body["emotion"] = emotion.Label;
                 if (emotion.Mode == EmotionMode.Instruction) { options[Mapping("emotionTextEnabled")] = true; options[Mapping("emotionText")] = emotion.Instruction; }
                 if (emotion.Mode == EmotionMode.Vector) options[Mapping("emotionVector")] = string.Join(',', emotion.Vector!.Select(v => v.ToString(CultureInfo.InvariantCulture)));
             }
             body["options"] = options;
-            progress?.Report(new(0, "Generating speech…"));
+            progress?.Report(new(.05, $"Voice and emotion reference preparation · {referenceWatch.Elapsed.TotalSeconds:F2} s"));
+            progress?.Report(new(.05, "Generating speech…"));
             await transport.SpeechAsync(model, body, request.OutputPath, cancellationToken);
             var info = await media.ProbeAsync(request.OutputPath, cancellationToken);
             var stream = info.Streams.First(s => s.Type == "audio");
@@ -181,9 +190,24 @@ public sealed class AudioCppTtsEngine(CatalogModel model, IAudioCppTransport tra
         finally { Directory.Delete(scratch, true); }
     }
     private string Mapping(string key) => model.FieldMappings.GetValueOrDefault(key) ?? throw new UnsupportedCapabilityException($"Model manifest has no mapping for {key}.");
-    private async Task<string> ReferenceAsync(AudioReference reference, string name, string directory, CancellationToken ct)
+    private async Task<string> ReferenceAsync(AudioReference reference, string name, string directory, string? cacheDirectory, IProgress<EngineProgress>? progress, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(reference.Path) || !File.Exists(reference.Path)) throw new EngineException($"Choose an existing {name} reference audio file.");
+        string? cachedPath = null;
+        if (cacheDirectory is not null && (reference.Start is not null || reference.End is not null))
+        {
+            var file = new FileInfo(reference.Path);
+            string key = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+                { file.FullName, file.Length, file.LastWriteTimeUtc, reference.Fingerprint, reference.Start, reference.End, model.Family })));
+            Directory.CreateDirectory(cacheDirectory);
+            cachedPath = Path.Combine(cacheDirectory, key + ".wav");
+            if (File.Exists(cachedPath))
+            {
+                progress?.Report(new(0, $"Reusing prepared {name} reference."));
+                return cachedPath;
+            }
+        }
         var info = await media.ProbeAsync(reference.Path, ct);
         var start = reference.Start ?? TimeSpan.Zero;
         var end = reference.End ?? info.Duration;
@@ -194,6 +218,11 @@ public sealed class AudioCppTtsEngine(CatalogModel model, IAudioCppTransport tra
         if (reference.Start is null && reference.End is null) return Path.GetFullPath(reference.Path);
         string output = Path.Combine(directory, name + ".wav");
         await media.CutAsync(reference.Path, output, start, end - start, ct);
+        if (cachedPath is not null)
+        {
+            ct.ThrowIfCancellationRequested();
+            File.Move(output, cachedPath, overwrite: true); return cachedPath;
+        }
         return output;
     }
 }

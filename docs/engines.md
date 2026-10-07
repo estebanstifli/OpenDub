@@ -39,7 +39,11 @@ Primary implementation references: [audio.cpp 0.9.0](https://github.com/0xShug0/
 
 ## Batched TTS and GPU diagnostics
 
-Generation groups segments by TTS engine. It completes the initial speech pass, prepares all duration-driven translation rewrites, then synthesizes the corrected segments in a second grouped pass. Further rounds honor the existing retry limits. This avoids alternating the LLM and TTS model for each segment while keeping only one provider resident at a time. Mixed voice-engine overrides still require model switches between engine groups. Small time-stretch corrections use FFmpeg.
+Generation groups segments by TTS engine. With IndexTTS/native speed fitting, each selected segment completes initial synthesis, any required retries, permitted final stretch and project checkpoint before the next starts. The individual Regenerate and fit action uses this same path. Selection and overwrite rules still apply. Already fitting segments do not repeat inference, and small deviations within Maximum time stretch go straight to FFmpeg even if the stricter duration tolerance is exceeded.
+
+When the selection includes an engine without native speed whose unlocked translations may need rewriting, the operation retains grouped initial TTS, translation adjustments and corrected TTS passes. This avoids alternating LLM and TTS residency for each segment. Retry limits still apply. Mixed voice-engine overrides require switches between engine groups.
+
+Source/reference file fingerprints are reused within an operation, keyed by full path, size and last modification time; a new operation recalculates them. Reference cuts are cached in the operation's scratch directory, keyed by source identity/metadata/fingerprint, range and model family. Voice and emotion can share the same cut; retries reuse it. Cancellation/failure removes scratch references along with candidates. Logs show reference preparation, initial generation, retry durations, final adjustment, per-segment total and cache reuse. TTS metrics now include fitting time instead of only initial synthesis.
 
 The optional Windows CUDA 13.3 runtime and CUDA dependencies are pinned in `runtimes/versions.json`. Build with `scripts/package.ps1 -AudioCuda`; CPU binaries remain available alongside `audio-cuda`. With Backend=auto and an NVIDIA GPU detected by nvidia-smi, audio providers select that CUDA build. Explicit executable paths override auto-discovery; Backend=cpu selects the CPU build. The old CPU-only package could not accelerate audio.cpp even when auto was selected.
 

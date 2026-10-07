@@ -509,6 +509,53 @@ public sealed class ProviderTests : IDisposable
         Assert.Empty(Directory.GetDirectories(root, "reference-*"));
     }
 
+    [FFmpegFact] public async Task PreparedReferencesAreSharedByVoiceEmotionAndRetriesAndInvalidatedOnChange()
+    {
+        Directory.CreateDirectory(root); string source = Path.Combine(root, "reference.wav");
+        await new MockTtsEngine().SynthesizeAsync(new() { Text = "reference", Language = "en", OutputPath = source, TargetDuration = TimeSpan.FromSeconds(4) }, null, default);
+        var media = new CountingMedia(Media); var transport = new FakeTransport();
+        var engine = new AudioCppTtsEngine(Model(EngineTask.Tts), transport, media);
+        string cache = Path.Combine(root, "operation-references");
+        var reference = new AudioReference(source, Start: TimeSpan.FromSeconds(.5), End: TimeSpan.FromSeconds(2));
+        var request = new TtsRequest { Text = "Hola", Language = "es", OutputPath = Path.Combine(root, "out.wav"), ReferenceCacheDirectory = cache,
+            VoiceReference = reference, Emotion = new() { Mode = EmotionMode.ReferenceAudio, ReferenceAudio = reference } };
+        transport.BeforeSpeech = body =>
+        {
+            Assert.Equal(body.GetProperty("voice_ref").GetString(), body.GetProperty("audio").GetString());
+            return Task.CompletedTask;
+        };
+        await engine.SynthesizeAsync(request, null, default);
+        string first = transport.Body.GetProperty("voice_ref").GetString()!;
+        await engine.SynthesizeAsync(request with { SpeakingRate = 1.2 }, null, default);
+        Assert.Equal(first, transport.Body.GetProperty("voice_ref").GetString());
+        Assert.Equal(1, media.Cuts); Assert.Equal(1, media.Probes.Count(p => p == source));
+        Assert.Single(Directory.GetFiles(cache));
+        var changedRange = reference with { End = TimeSpan.FromSeconds(2.5) };
+        await engine.SynthesizeAsync(request with { VoiceReference = changedRange, Emotion = request.Emotion with { ReferenceAudio = changedRange } }, null, default);
+        Assert.Equal(2, media.Cuts);
+        File.SetLastWriteTimeUtc(source, File.GetLastWriteTimeUtc(source).AddSeconds(2));
+        await engine.SynthesizeAsync(request, null, default);
+        Assert.Equal(3, media.Cuts); Assert.NotEqual(first, transport.Body.GetProperty("voice_ref").GetString());
+        await engine.SynthesizeAsync(request with { ReferenceCacheDirectory = Path.Combine(root, "next-operation") }, null, default);
+        Assert.Equal(4, media.Cuts);
+        Assert.Empty(Directory.GetDirectories(root, "reference-*"));
+    }
+
+    private sealed class CountingMedia(Dubbing.Core.Media.IMediaEngine inner) : Dubbing.Core.Media.IMediaEngine
+    {
+        public int Cuts;
+        public List<string> Probes { get; } = [];
+        public Task<Dubbing.Core.Media.MediaInfo> ProbeAsync(string path, CancellationToken ct) { Probes.Add(path); return inner.ProbeAsync(path, ct); }
+        public Task CutAsync(string input, string output, TimeSpan start, TimeSpan duration, CancellationToken ct) { Cuts++; return inner.CutAsync(input, output, start, duration, ct); }
+        public Task StretchAsync(string input, string output, double rate, CancellationToken ct) => inner.StretchAsync(input, output, rate, ct);
+        public Task ExtractAudioAsync(string input, string output, int sampleRate, int channels, IProgress<EngineProgress>? progress, CancellationToken ct) => inner.ExtractAudioAsync(input, output, sampleRate, channels, progress, ct);
+        public Task ExtractTrackAsync(string input, int streamIndex, string output, int sampleRate, int channels, IProgress<EngineProgress>? progress, CancellationToken ct, TimeSpan? start = null, TimeSpan? duration = null) => inner.ExtractTrackAsync(input, streamIndex, output, sampleRate, channels, progress, ct, start, duration);
+        public Task MixAsync(Dubbing.Core.Media.MixRequest request, IProgress<EngineProgress>? progress, CancellationToken ct) => inner.MixAsync(request, progress, ct);
+        public Task MuxAsync(string video, string audio, string output, IProgress<EngineProgress>? progress, CancellationToken ct) => inner.MuxAsync(video, audio, output, progress, ct);
+        public Task ExtractFrameAsync(string video, string output, TimeSpan position, CancellationToken ct) => inner.ExtractFrameAsync(video, output, position, ct);
+        public Task<IReadOnlyList<float>> WaveformAsync(string audio, int peakCount, CancellationToken ct) => inner.WaveformAsync(audio, peakCount, ct);
+    }
+
     [FFmpegFact] public async Task LockedTranslationIsNeverRewrittenAndSmallTimingErrorUsesStretch()
     {
         Directory.CreateDirectory(root); string raw = Path.Combine(root, "raw.wav");

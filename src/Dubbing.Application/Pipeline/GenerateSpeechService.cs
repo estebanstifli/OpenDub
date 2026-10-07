@@ -17,7 +17,18 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
         var metrics = new Dictionary<string, JobMetric>();
         using var candidates = new SpeechWorkspace(directory);
         var operationProgress = progress;
-        progress = new PhaseProgress(operationProgress, 0, fitDuration && timing is not null ? .45 : .95, "Speech generation");
+        var fingerprints = new Dictionary<string, (long Length, DateTime LastWrite, string Hash)>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        int hashesComputed = 0, hashesReused = 0;
+        async Task<string> ReferenceFingerprintAsync(string path)
+        {
+            path = Path.GetFullPath(path);
+            var file = new FileInfo(path);
+            if (fingerprints.TryGetValue(path, out var cached) && cached.Length == file.Length && cached.LastWrite == file.LastWriteTimeUtc)
+            { hashesReused++; return cached.Hash; }
+            string hash = await ContentFingerprint.ComputeAsync(path, cancellationToken);
+            fingerprints[path] = (file.Length, file.LastWriteTimeUtc, hash); hashesComputed++;
+            return hash;
+        }
         if (project.AudioTracks.Count > 0 && project.SelectedSourceAudio is null)
             throw new InvalidOperationException("Audio track settings changed. Prepare audio before generating speech.");
         if (project.Source is { } source)
@@ -41,6 +52,15 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
             .Where(i => (segmentIds is null || segmentIds.Contains(segments[i].Id)) &&
                 (overwriteExisting != false || segments[i].GeneratedSpeech is null || !File.Exists(Path.Combine(directory, segments[i].GeneratedSpeech!.File))))
             .GroupBy(i => selection.ResolveTts(project, segments[i]).Descriptor.EngineId).SelectMany(g => g).ToArray();
+        // Native speed fitting (IndexTTS) stays on one resident engine. Only engines
+        // that actually need translation rewrites benefit from grouped model passes.
+        bool incremental = !fitDuration || timing is null || !eligible.Any(i =>
+            !selection.ResolveTts(project, segments[i]).Descriptor.Capabilities.SupportsSpeakingRate &&
+            !segments[i].Translation.Locked && project.Engines.Translation is not null &&
+            project.Settings.MaximumTtsRetries > 0 && project.Settings.MaximumTranslationRetries > 0);
+        progress = new PhaseProgress(operationProgress, 0, incremental ? 1 : .45, "Speech generation");
+        progress.Report(new(0, incremental ? "Completing and saving each segment before starting the next; reusing the resident speech model."
+            : "Grouped fitting: translation rewrites are batched to avoid repeated model reloads."));
         if (media is not null)
         {
             var checkedReferences = new HashSet<string>();
@@ -67,6 +87,9 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
             int index = eligible[position];
             cancellationToken.ThrowIfCancellationRequested();
             var segment = segments[index];
+            var started = System.Diagnostics.Stopwatch.StartNew();
+            var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
+            var itemProgress = new PhaseProgress(progress, (double)position / eligible.Length, 1d / eligible.Length, $"Segment {index + 1}");
             if (segment.ExcludedFromDubbing) continue;
             progress?.Report(new((double)position / eligible.Length, $"TTS pass · segment {position + 1}/{eligible.Length} ({segment.Start.TotalSeconds:F2} s)", segment.Id));
             if (segmentId is not null && segment.Id != segmentId) continue;
@@ -104,22 +127,23 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
             {
                 string path = Path.IsPathRooted(emotionAudio.Path) ? emotionAudio.Path : Path.Combine(directory, emotionAudio.Path);
                 emotion = emotion with { ReferenceAudio = emotionAudio with { Path = path,
-                    Fingerprint = await ContentFingerprint.ComputeAsync(path, cancellationToken) } };
+                    Fingerprint = await ReferenceFingerprintAsync(path) } };
             }
             var speaker = project.Speakers.FirstOrDefault(x => x.Id == segment.SpeakerId);
             AudioReference? reference = null;
             if (project.Settings.UseSourceVoicePerSegment && speaker?.HasManualVoiceReference != true && project.Source is not null && capabilities.SupportsVoiceCloning)
-                reference = sourceReference with { Fingerprint = await ContentFingerprint.ComputeAsync(sourceAudio, cancellationToken) };
+                reference = sourceReference with { Fingerprint = await ReferenceFingerprintAsync(sourceAudio) };
             else if (speaker?.VoiceReference is { } voice && capabilities.SupportsVoiceCloning)
             {
                 var path = Path.IsPathRooted(voice.Path) ? voice.Path : Path.Combine(directory, voice.Path);
-                reference = voice with { Path = path, Fingerprint = await ContentFingerprint.ComputeAsync(path, cancellationToken) };
+                reference = voice with { Path = path, Fingerprint = await ReferenceFingerprintAsync(path) };
             }
             progress?.Report(new((double)position / eligible.Length,
                 $"Voice reference: {(speaker?.HasManualVoiceReference == true ? speaker.DisplayName + " (manual)" : project.Settings.UseSourceVoicePerSegment ? "original segment" : speaker?.DisplayName ?? "none")} · {Path.GetFileName(reference?.Path ?? "none")} · emotion: {emotion.Mode}", segment.Id));
             var request = new TtsRequest
             {
                 Text = segment.Translation.Text, Language = segment.Translation.Language, OutputPath = "",
+                ReferenceCacheDirectory = Path.GetFullPath(Path.Combine(directory, candidates.RelativeDirectory, "references")),
                 SpeakerProfileId = segment.SpeakerId, VoiceReference = reference,
                 Emotion = emotion.Mode == EmotionMode.None ? null : emotion,
                 TargetDuration = capabilities.SupportsTargetDuration ? segment.TargetDuration : null,
@@ -130,7 +154,8 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
             string relative = overwriteExisting != true && segment.GeneratedSpeech is { } cached && cached.CacheKey == key ? cached.File : "";
             string output = Path.Combine(directory, relative);
             var previous = segment.GeneratedSpeech;
-            var started = System.Diagnostics.Stopwatch.StartNew();
+            itemProgress.Report(new(.1, $"Reference selection and fingerprints · {phaseWatch.Elapsed.TotalSeconds:F2} s", segment.Id));
+            phaseWatch.Restart();
             bool validCache = overwriteExisting != true && previous is not null && previous.CacheKey == key && previous.File == relative &&
                 File.Exists(output) && previous.Fingerprint is not null &&
                 await ContentFingerprint.ComputeAsync(output, cancellationToken) == previous.Fingerprint;
@@ -139,16 +164,16 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
                 relative = $"{candidates.RelativeDirectory}/{key}-{Guid.NewGuid():N}.wav";
                 output = Path.Combine(directory, relative);
                 var result = await engine.SynthesizeAsync(request with { OutputPath = output },
-                    new PhaseProgress(progress, (double)position / eligible.Length, 1d / eligible.Length, "Candidate"), cancellationToken);
+                    new PhaseProgress(itemProgress, .1, incremental && fitDuration && timing is not null ? .35 : .8, "Candidate"), cancellationToken);
                 if (!File.Exists(output) || result.Duration <= TimeSpan.Zero) throw new EngineException("The engine did not generate valid audio.");
                 previous = new(relative, result.Duration, key, await ContentFingerprint.ComputeAsync(output, cancellationToken));
             }
             GeneratedSpeech? fitted = validCache && fitDuration ? segment.FittedSpeech : null;
-            int retries = 0;
             bool fitValid = validCache && fitted is not null && !segment.DirtyStages.Contains(PipelineStage.DurationFit) &&
                 File.Exists(Path.Combine(directory, fitted.File)) && fitted.Fingerprint == await ContentFingerprint.ComputeAsync(Path.Combine(directory, fitted.File), cancellationToken);
             bool needsFitting = fitDuration && timing is not null && !fitValid;
-            if (needsFitting) fitting.Add(new(segment, engine, request, previous!));
+            itemProgress.Report(new(incremental && needsFitting ? .45 : .9, $"Initial speech {(validCache ? "cache" : "generation")} · {phaseWatch.Elapsed.TotalSeconds:F2} s", segment.Id));
+            if (needsFitting && !incremental) fitting.Add(new(segment, engine, request, previous!));
             segments[index] = segment with
             {
                 GeneratedSpeech = previous, FittedSpeech = fitted,
@@ -157,22 +182,33 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
                     .Union(fitDuration ? [] : new[] { PipelineStage.DurationFit })
                     .Union(StageDependencies.After(PipelineStage.DurationFit)).Order().ToArray()
             };
-            metrics[segment.Id] = new("Tts", started.Elapsed.TotalSeconds, previous!.Duration.TotalSeconds, segment.Id, retries);
+            metrics[segment.Id] = new("Tts", started.Elapsed.TotalSeconds, previous!.Duration.TotalSeconds, segment.Id);
+            if (needsFitting && incremental)
+            {
+                var results = await timing!.FitBatchAsync(project, [new(segment, engine, request, previous!)], directory,
+                    new PhaseProgress(itemProgress, .45, .5, "Duration fit"), cancellationToken, workingDirectory: candidates.RelativeDirectory);
+                await CompleteFitAsync(results[0]);
+            }
             if (!needsFitting) await PublishAsync(index, segments[index]);
-            progress?.Report(new((double)(position + 1) / eligible.Length, needsFitting ? "TTS pass · candidate ready; duration fitting pending" : "TTS pass · final speech published", segment.Id));
+            itemProgress.Report(new(1, !incremental && needsFitting ? "TTS pass · candidate ready; duration fitting pending"
+                : $"Final speech saved · total {started.Elapsed.TotalSeconds:F2} s · retries {metrics[segment.Id].Retries}", segment.Id));
         }
         if (timing is not null && fitting.Count > 0)
-            await timing.FitBatchAsync(project, fitting, directory, new PhaseProgress(operationProgress, .45, .5, "Duration fit"), cancellationToken, async fit =>
-            {
-                int index = Array.FindIndex(segments, s => s.Id == fit.Segment.Id);
-                segments[index] = fit.Segment with { GeneratedSpeech = fit.Speech, FittedSpeech = fit.Fitted,
-                    Status = Math.Abs((fit.Fitted ?? fit.Speech).Duration.TotalSeconds / fit.Segment.TargetDuration.TotalSeconds - 1) > project.Settings.DurationTolerance ? SegmentStatus.Error : SegmentStatus.TtsGenerated,
-                    DirtyStages = segments[index].DirtyStages };
-                metrics[fit.Segment.Id] = metrics[fit.Segment.Id] with { AudioSeconds = (fit.Fitted ?? fit.Speech).Duration.TotalSeconds, Retries = fit.Retries };
-                await PublishAsync(index, segments[index]);
-            }, candidates.RelativeDirectory);
+            await timing.FitBatchAsync(project, fitting, directory, new PhaseProgress(operationProgress, .45, .5, "Duration fit"), cancellationToken, CompleteFitAsync, candidates.RelativeDirectory);
+        operationProgress?.Report(new(1, $"Reference fingerprints · computed {hashesComputed}, reused {hashesReused}"));
         operationProgress?.Report(new(1, "Speech operation complete. Final audio is ready for overlap review."));
         return published;
+
+        async Task CompleteFitAsync(DurationFitResult fit)
+        {
+            int index = Array.FindIndex(segments, s => s.Id == fit.Segment.Id);
+            segments[index] = fit.Segment with { GeneratedSpeech = fit.Speech, FittedSpeech = fit.Fitted,
+                Status = Math.Abs((fit.Fitted ?? fit.Speech).Duration.TotalSeconds / fit.Segment.TargetDuration.TotalSeconds - 1) > project.Settings.DurationTolerance ? SegmentStatus.Error : SegmentStatus.TtsGenerated,
+                DirtyStages = segments[index].DirtyStages };
+            metrics[fit.Segment.Id] = metrics[fit.Segment.Id] with { WallSeconds = metrics[fit.Segment.Id].WallSeconds + fit.ElapsedSeconds,
+                AudioSeconds = (fit.Fitted ?? fit.Speech).Duration.TotalSeconds, Retries = fit.Retries };
+            await PublishAsync(index, segments[index]);
+        }
 
         async Task PublishAsync(int index, DubSegment completed)
         {

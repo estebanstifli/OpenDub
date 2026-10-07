@@ -5,7 +5,7 @@ using Dubbing.Core.Projects;
 
 namespace Dubbing.Application.Pipeline;
 
-public sealed record DurationFitResult(DubSegment Segment, GeneratedSpeech Speech, GeneratedSpeech? Fitted, int Retries);
+public sealed record DurationFitResult(DubSegment Segment, GeneratedSpeech Speech, GeneratedSpeech? Fitted, int Retries, double ElapsedSeconds = 0);
 
 public sealed record DurationFitWork(DubSegment Segment, ITtsEngine Engine, TtsRequest Request, GeneratedSpeech Speech);
 
@@ -24,6 +24,7 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
     {
         var work = input.ToArray();
         var retries = new int[work.Length]; var rewrites = new int[work.Length];
+        var elapsed = new double[work.Length];
         for (int round = 0; round < project.Settings.MaximumTtsRetries; round++)
         {
             var pending = new List<int>();
@@ -32,7 +33,10 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
             {
                 ct.ThrowIfCancellationRequested();
                 var (segment, engine, request, speech) = work[i];
-                if (Math.Abs(speech.Duration.TotalSeconds / segment.TargetDuration.TotalSeconds - 1) <= project.Settings.DurationTolerance) continue;
+                double error = Math.Abs(speech.Duration.TotalSeconds / segment.TargetDuration.TotalSeconds - 1);
+                // A small error can already be corrected by the permitted final stretch.
+                // Do not spend another full inference trying to solve it first.
+                if (error <= project.Settings.DurationTolerance || error <= project.Settings.MaximumTimeStretch) continue;
                 progress?.Report(new((round + .5 * i / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1), $"Duration adjustment pass {round + 1}: preparing segment {i + 1}/{work.Length}", segment.Id));
                 double ratio = speech.Duration.TotalSeconds / segment.TargetDuration.TotalSeconds;
                 if (engine.Descriptor.Capabilities.SupportsSpeakingRate)
@@ -46,6 +50,7 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
                 else if (!segment.Translation.Locked && project.Engines.Translation is { } translator && rewrites[i] < project.Settings.MaximumTranslationRetries)
                 {
                     progress?.Report(new((round + .5 * i / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1), $"Duration adjustment: speech {speech.Duration.TotalSeconds:F2} s, target {segment.TargetDuration.TotalSeconds:F2} s; requesting a translation rewrite", segment.Id));
+                    var rewriteWatch = System.Diagnostics.Stopwatch.StartNew();
                     var translated = await registry.GetEngine<ITranslationEngine>(translator).TranslateAsync(new(segment.Id, segment.Source.Text,
                         segment.Source.Language, segment.Translation.Language)
                     {
@@ -54,6 +59,8 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
                         StyleInstructions = $"Previous wording: {segment.Translation.Text}. Actual speech took {speech.Duration.TotalSeconds:F2} seconds. " +
                             $"Rewrite {(ratio > 1 ? "more concisely" : "slightly longer")} for {segment.TargetDuration.TotalSeconds:F2} seconds. Preserve all meaning."
                     }, ct);
+                    elapsed[i] += rewriteWatch.Elapsed.TotalSeconds;
+                    progress?.Report(new((round + .5 * i / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1), $"Translation adjustment · {rewriteWatch.Elapsed.TotalSeconds:F2} s", segment.Id));
                     if (translated.SegmentId != segment.Id || translated.Language != segment.Translation.Language || string.IsNullOrWhiteSpace(translated.Text))
                         throw new InvalidDataException("Duration adaptation returned an invalid translation.");
                     rewrites[i]++;
@@ -77,8 +84,14 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
                 progress?.Report(new((round + .5 + .5 * i / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1), $"Duration adjustment pass {round + 1}: synthesizing segment {i + 1}/{work.Length}", segment.Id));
                 string key = TtsCacheKey.Create(engine.Descriptor, segment.Tts.ModelId, segment.Tts.ModelVersion, request);
                 string relative = $"{workingDirectory ?? "generated/tts"}/{key}-{Guid.NewGuid():N}.wav", output = Path.Combine(directory, relative);
-                var result = await engine.SynthesizeAsync(request with { OutputPath = output }, null, ct);
+                var retryWatch = System.Diagnostics.Stopwatch.StartNew();
+                double fraction = (round + .5 + .5 * i / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1);
+                var result = await engine.SynthesizeAsync(request with { OutputPath = output },
+                    new PhaseProgress(progress, fraction, .5 / Math.Max(1, work.Length) / (project.Settings.MaximumTtsRetries + 1), $"Retry {round + 1}"), ct);
+                if (!File.Exists(output) || result.Duration <= TimeSpan.Zero) throw new InvalidDataException("Duration adjustment did not generate valid audio.");
                 speech = new(relative, result.Duration, key, await ContentFingerprint.ComputeAsync(output, ct)); retries[i]++;
+                elapsed[i] += retryWatch.Elapsed.TotalSeconds;
+                progress?.Report(new(fraction + .5 / Math.Max(1, work.Length) / (project.Settings.MaximumTtsRetries + 1), $"Speech retry {round + 1} · {retryWatch.Elapsed.TotalSeconds:F2} s", segment.Id));
                 work[i] = new(segment, engine, request, speech);
                 // Retry WAVs and rewritten text stay provisional until the final fitting pass.
             }
@@ -88,6 +101,7 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
         {
             ct.ThrowIfCancellationRequested();
             var (segment, engine, request, speech) = work[i];
+            var finalWatch = System.Diagnostics.Stopwatch.StartNew();
             progress?.Report(new((project.Settings.MaximumTtsRetries + (double)i / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1), "Final duration pass: measuring and applying permitted time stretch", segment.Id));
             GeneratedSpeech? fitted = null;
             double speed = speech.Duration.TotalSeconds / segment.TargetDuration.TotalSeconds;
@@ -99,11 +113,12 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
                 var info = await media.ProbeAsync(Path.Combine(directory, file), ct);
                 fitted = new(file, info.Duration, key, await ContentFingerprint.ComputeAsync(Path.Combine(directory, file), ct));
             }
-            var result = new DurationFitResult(segment, speech, fitted, retries[i]);
+            elapsed[i] += finalWatch.Elapsed.TotalSeconds;
+            var result = new DurationFitResult(segment, speech, fitted, retries[i], elapsed[i]);
             results.Add(result);
             if (checkpoint is not null) await checkpoint(result);
             progress?.Report(new((project.Settings.MaximumTtsRetries + (i + 1d) / Math.Max(1, work.Length)) / (project.Settings.MaximumTtsRetries + 1),
-                $"Final duration: {(fitted ?? speech).Duration.TotalSeconds:F2} s / {segment.TargetDuration.TotalSeconds:F2} s target", segment.Id));
+                $"Final duration: {(fitted ?? speech).Duration.TotalSeconds:F2} s / {segment.TargetDuration.TotalSeconds:F2} s target · final adjustment {finalWatch.Elapsed.TotalSeconds:F2} s · fitting total {elapsed[i]:F2} s", segment.Id));
         }
         return results;
     }
