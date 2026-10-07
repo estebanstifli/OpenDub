@@ -102,12 +102,26 @@ public partial class MainViewModel
         if (!await SaveCoreAsync(ct)) return;
         string directory = session.DirectoryPath!;
         string destination = Path.Combine(directory, "exports", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
-        string profile = Settings.DefaultExportProfile; bool original = false, subtitles = true;
-        int pending = session.Project.Segments.Count(s => !s.ExcludedFromDubbing && (s.GeneratedSpeech is null || s.DirtyStages.Contains(Dubbing.Core.Pipeline.PipelineStage.Tts)));
+        string profile = Settings.DefaultExportProfile; bool original = false, subtitles = true, allowMismatch = false;
+        var mismatches = session.Project.Segments.Select((s, i) => (Segment: s, Number: i + 1))
+            .Where(x => !x.Segment.ExcludedFromDubbing && ProjectAudioMix.EffectiveSpeech(x.Segment) is { } audio &&
+                Math.Abs(audio.Duration.TotalSeconds / x.Segment.TargetDuration.TotalSeconds - 1) > session.Project.Settings.DurationTolerance).ToArray();
+        var pendingSegments = session.Project.Segments.Select((s, i) => (Segment: s, Number: i + 1))
+            .Where(x => !x.Segment.ExcludedFromDubbing && (ProjectAudioMix.EffectiveSpeech(x.Segment) is null ||
+                x.Segment.DirtyStages.Any(stage => stage is not Dubbing.Core.Pipeline.PipelineStage.Mix and not Dubbing.Core.Pipeline.PipelineStage.Mux and not Dubbing.Core.Pipeline.PipelineStage.DurationFit)))
+            .Select(x => x.Number).ToArray();
+        int pending = pendingSegments.Length;
         var options = new PipelineDialogOptions { OperationTitle = "Export", ConfigureFields = panel =>
         {
             panel.Children.Add(Label(L.Format("Segments: {0} · Missing or outdated speech: {1}", session.Project.Segments.Count, pending)));
+            if (pending > 0) panel.Children.Add(Label(L.Format("Generate or regenerate before exporting: {0}", string.Join(", ", pendingSegments))));
             panel.Children.Add(Label("Export uses the timeline volume and mute settings. Review the mix before exporting."));
+            panel.Children.Add(Label(L.Format("Duration mismatches: {0}", mismatches.Length)));
+            if (mismatches.Length > 0)
+                panel.Children.Add(Label(L.Format("Review segments: {0}", string.Join(", ", mismatches.Select(x => x.Number)))));
+            var timing = new CheckBox { Content = L["Allow duration mismatches (speech may overlap)"] };
+            timing.IsCheckedChanged += (_, _) => allowMismatch = timing.IsChecked == true; panel.Children.Add(timing);
+            panel.Children.Add(Label("Keeps each WAV at its segment start without moving later segments or cutting speech. Short clips leave silence; long clips may overlap. Missing, outdated or externally modified audio still blocks export."));
             panel.Children.Add(Label("Export profile"));
             var profiles = new ComboBox { ItemsSource = ExportOptions.Profiles, SelectedItem = profile, HorizontalAlignment = HorizontalAlignment.Stretch };
             profiles.SelectionChanged += (_, _) => profile = (string)profiles.SelectedItem!; panel.Children.Add(profiles);
@@ -119,7 +133,7 @@ public partial class MainViewModel
         await dialogs.RunPipelineAsync(options, async () =>
         {
             if (string.IsNullOrWhiteSpace(destination)) throw new ArgumentException("Choose an export folder.");
-            try { await exporter.ExportAsync(session.Project, directory, ReportProgress(), ct, new() { Directory = destination, Profile = profile, KeepOriginalAudio = original, EmbedSubtitles = subtitles }); }
+            try { await exporter.ExportAsync(session.Project, directory, ReportProgress(), ct, new() { Directory = destination, Profile = profile, KeepOriginalAudio = original, EmbedSubtitles = subtitles, AllowDurationMismatch = allowMismatch }); }
             finally { await session.OpenAsync(directory, CancellationToken.None); Refresh(); }
             Status = L.Format("Exported: {0}", destination);
         }, () => operation?.Cancel());

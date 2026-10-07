@@ -76,7 +76,7 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
                 var (segment, engine, request, speech) = work[i];
                 progress?.Report(new((double)i / Math.Max(1, work.Length), $"Duration adjustment pass {round + 1}: synthesizing segment {i + 1}/{work.Length}", segment.Id));
                 string key = TtsCacheKey.Create(engine.Descriptor, segment.Tts.ModelId, segment.Tts.ModelVersion, request);
-                string relative = $"generated/tts/{key}.wav", output = Path.Combine(directory, relative);
+                string relative = $"generated/tts/{key}-{Guid.NewGuid():N}.wav", output = Path.Combine(directory, relative);
                 var result = await engine.SynthesizeAsync(request with { OutputPath = output }, null, ct);
                 speech = new(relative, result.Duration, key, await ContentFingerprint.ComputeAsync(output, ct)); retries[i]++;
                 work[i] = new(segment, engine, request, speech);

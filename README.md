@@ -35,6 +35,8 @@ Imports copy the source video into the project by default. JSON stores a relativ
 
 Video profiles can retain original audio as alternative tracks. Export uses timeline mute/gain settings, validates audio/timing and requires an empty destination. Files are prepared before publication; previous exports are preserved. WAV, SRT and render metadata accompany video.
 
+Export lists pending segments and timing mismatches, with progress for mixing, encoding and publishing. An explicit timing override can export WAVs at their existing starts, allowing silence/overlap; it never bypasses stale or externally modified audio checks. See [segment audio lifecycle](docs/audio-segment-lifecycle.md).
+
 ## Build and test
 
 Use the .NET SDK in `global.json`:

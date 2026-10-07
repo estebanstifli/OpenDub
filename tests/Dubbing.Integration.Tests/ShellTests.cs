@@ -87,27 +87,33 @@ public sealed class ShellTests
     }
 
     [AvaloniaTheory]
-    [InlineData(true, "complete")]
-    [InlineData(true, "background")]
-    [InlineData(true, "cancel")]
-    [InlineData(false, "complete")]
-    [InlineData(false, "cancel")]
-    public async Task PipelineDialogsStartCancelAndBackground(bool translate, string action)
+    [InlineData(true, "complete", null)]
+    [InlineData(true, "background", null)]
+    [InlineData(true, "cancel", null)]
+    [InlineData(false, "complete", null)]
+    [InlineData(false, "cancel", null)]
+    [InlineData(false, "complete", "Export")]
+    [InlineData(false, "background", "Export")]
+    [InlineData(false, "cancel", "Export")]
+    public async Task PipelineDialogsStartCancelAndBackground(bool translate, string action, string? title)
     {
         var owner = new Window { DataContext = new { Status = "Working", Progress = 40.0, ActivityText = "Loading model..." } }; owner.Show();
         var completion = new TaskCompletionSource();
         int starts = 0, cancels = 0;
         var engine = new Dubbing.Engines.Mock.MockTranslationEngine().Descriptor;
-        var options = new PipelineDialogOptions { Translation = translate, Languages = ["es", "en"], Engines = [engine], Engine = engine, SegmentCount = 2 };
+        var options = new PipelineDialogOptions { OperationTitle = title, Translation = translate, Languages = ["es", "en"], Engines = [engine], Engine = engine, SegmentCount = title is null ? 2 : 0 };
         try
         {
             var pending = new ProjectDialogs(owner).RunPipelineAsync(options, () => { starts++; return completion.Task; }, () => { cancels++; completion.TrySetCanceled(); });
             var dialog = owner.OwnedWindows.Single(); dialog.UpdateLayout();
             void Click(string tag) => dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Tag, tag)).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(0, starts);
+            var bar = dialog.GetVisualDescendants().OfType<ProgressBar>().Single();
+            Assert.True(bar.Bounds.Height > 0); Assert.Equal(40, bar.Value);
             if (Environment.GetEnvironmentVariable("DUBBING_PIPELINE_SCREENSHOT") is { Length: > 0 } screenshot && translate && action == "complete")
             { using var frame = dialog.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(screenshot); }
             Click("Start"); Assert.Equal(1, starts); Assert.False(pending.IsCompleted);
+            Assert.True(dialog.IsVisible);
             if (action == "background")
             {
                 Click("Continue in background");

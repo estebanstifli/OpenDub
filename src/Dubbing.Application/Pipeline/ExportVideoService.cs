@@ -12,6 +12,7 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         IProgress<EngineProgress>? progress, CancellationToken cancellationToken, ExportOptions? options = null)
     {
         var source = project.Source ?? throw new InvalidOperationException("Import a video first.");
+        progress?.Report(new(0, "Export · validating source video and destination…"));
         if (await ContentFingerprint.ComputeAsync(source.Path, cancellationToken) != source.Fingerprint)
             throw new InvalidOperationException("The original video has changed since import.");
         if (options is not null && !ExportOptions.Profiles.Contains(options.Profile)) throw new ArgumentException("Unknown export profile.");
@@ -19,7 +20,8 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         destination = Path.GetFullPath(destination);
         if (options is not null && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
             throw new IOException("Choose an empty export folder to preserve previous exports.");
-        var audio = await renderer.RenderAsync(project, directory, progress, cancellationToken);
+        progress?.Report(new(.05, "Export · validating segments and mixing audio…"));
+        var audio = await renderer.RenderAsync(project, directory, new PhaseProgress(progress, .05, .25, "Export audio"), cancellationToken, options?.AllowDurationMismatch == true);
         string finalDestination = destination;
         if (options is not null) destination = Path.Combine(directory, "renders", "export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(destination);
@@ -30,30 +32,37 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         string container = options is null ? project.Settings.ExportContainer : options.Profile == "Recommended MP4" ? "mp4" : "mkv";
         string output = Path.Combine(destination, "dubbed." + container);
         if (options?.Profile is not ("Audio only" or "Editing package"))
+        {
+            progress?.Report(new(.30, container == "mp4" ? "Export · encoding MP4 (H.264/AAC)…" : "Export · copying video into MKV…"));
             await media.MuxAsync(source.Path, audio, output, new(CopyVideo: container == "mkv", KeepOriginalAudio: options?.KeepOriginalAudio == true,
-                Subtitles: options?.EmbedSubtitles == true ? subtitles : null, Language: project.Settings.TargetLanguage), progress, cancellationToken);
+                Subtitles: options?.EmbedSubtitles == true ? subtitles : null, Language: project.Settings.TargetLanguage), new PhaseProgress(progress, .30, .55, "Export video"), cancellationToken);
+        }
         if (Path.GetFullPath(audio) != Path.Combine(destination, "dub_track.wav")) File.Copy(audio, Path.Combine(destination, "dub_track.wav"), true);
         if (options?.Profile == "Editing package")
         {
+            int stemNumber = 0;
             foreach (var (name, audition) in new[] { ("dialogue.wav", AudioAudition.Dub), ("background.wav", AudioAudition.Background) })
             {
                 if (audition == AudioAudition.Background && !project.Stems.Keys.Any(ProjectAudioMix.IsBackground)) continue;
-                var clips = await ProjectAudioMix.ClipsAsync(project, directory, true, progress, cancellationToken, audition);
-                await ProjectAudioMix.RenderAsync(media, clips, Path.Combine(destination, name), source.Duration, source.SampleRate, ProjectAudioMix.Channels(project), progress, cancellationToken);
+                var stemProgress = new PhaseProgress(progress, .30 + stemNumber++ * .275, .275, "Export " + name);
+                var clips = await ProjectAudioMix.ClipsAsync(project, directory, true, stemProgress, cancellationToken, audition, allowDurationMismatch: options.AllowDurationMismatch);
+                await ProjectAudioMix.RenderAsync(media, clips, Path.Combine(destination, name), source.Duration, source.SampleRate, ProjectAudioMix.Channels(project), stemProgress, cancellationToken);
             }
         }
         project = project with
         {
-            Segments = project.Segments.Select(s => s.ExcludedFromDubbing ? s : s with { Status = SegmentStatus.Ready,
+            Segments = project.Segments.Select(s => s.ExcludedFromDubbing || project.Settings.DubMuted ||
+                Math.Abs(ProjectAudioMix.EffectiveSpeech(s)!.Duration.TotalSeconds / s.TargetDuration.TotalSeconds - 1) > project.Settings.DurationTolerance ? s : s with { Status = SegmentStatus.Ready,
                 DirtyStages = s.DirtyStages.Except([PipelineStage.DurationFit, PipelineStage.Mix, PipelineStage.Mux]).ToArray() }).ToArray()
         };
         await File.WriteAllTextAsync(Path.Combine(destination, "render-metadata.json"), System.Text.Json.JsonSerializer.Serialize(new
-        { schemaVersion = 1, applicationVersion = typeof(ExportVideoService).Assembly.GetName().Version?.ToString(), project.Engines, project.Settings, project.Metrics,
+        { schemaVersion = 1, applicationVersion = typeof(ExportVideoService).Assembly.GetName().Version?.ToString(), exportOptions = options, project.Engines, project.Settings, project.Metrics,
             execution = metadata?.Describe(), availableEngineVersions = registry is null ? null : Enum.GetValues<EngineTask>().SelectMany(registry.GetAvailableEngines).Select(e => new { e.EngineId, e.Version }),
             segments = project.Segments.Select(s => new { s.Id, s.ExcludedFromDubbing, s.Tts, s.GeneratedSpeech, s.FittedSpeech }) }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (options is not null)
         {
+            progress?.Report(new(.90, "Export · publishing output files…"));
             Directory.CreateDirectory(Path.GetDirectoryName(finalDestination)!);
             if (Directory.Exists(finalDestination)) Directory.Delete(finalDestination, false);
             // Copy to a sibling staging folder so publication works across volumes.
@@ -61,11 +70,25 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
             Directory.CreateDirectory(staging);
             try
             {
-                foreach (string file in Directory.EnumerateFiles(destination))
+                var files = Directory.GetFiles(destination);
+                long totalBytes = files.Sum(file => new FileInfo(file).Length), copied = 0;
+                int lastPercent = -1;
+                var buffer = new byte[131072];
+                foreach (string file in files)
                 {
                     await using var sourceFile = File.OpenRead(file);
                     await using var targetFile = new FileStream(Path.Combine(staging, Path.GetFileName(file)), FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, true);
-                    await sourceFile.CopyToAsync(targetFile, cancellationToken);
+                    int read;
+                    while ((read = await sourceFile.ReadAsync(buffer, cancellationToken)) > 0)
+                    {
+                        await targetFile.WriteAsync(buffer.AsMemory(0, read), cancellationToken); copied += read;
+                        int percent = (int)(100d * copied / Math.Max(1, totalBytes));
+                        if (percent != lastPercent)
+                        {
+                            lastPercent = percent;
+                            progress?.Report(new(.90 + .09 * copied / Math.Max(1d, totalBytes), "Export · publishing " + Path.GetFileName(file)));
+                        }
+                    }
                 }
                 cancellationToken.ThrowIfCancellationRequested(); Directory.Move(staging, finalDestination);
             }

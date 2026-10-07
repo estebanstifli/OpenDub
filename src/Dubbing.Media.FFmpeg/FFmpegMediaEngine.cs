@@ -93,10 +93,11 @@ public sealed class FFmpegMediaEngine(IProcessRunner runner, IRuntimeLocator loc
     public Task MuxAsync(string video, string audio, string output, IProgress<EngineProgress>? progress, CancellationToken cancellationToken)
         => MuxAsync(video, audio, output, new(CopyVideo: Path.GetExtension(output).Equals(".mkv", StringComparison.OrdinalIgnoreCase)), progress, cancellationToken);
 
-    public Task MuxAsync(string video, string audio, string output, MuxOptions options, IProgress<EngineProgress>? progress, CancellationToken cancellationToken)
+    public async Task MuxAsync(string video, string audio, string output, MuxOptions options, IProgress<EngineProgress>? progress, CancellationToken cancellationToken)
     {
         string extension = Path.GetExtension(output).ToLowerInvariant();
         if (extension is not ".mkv" and not ".mp4") throw new ArgumentException("Choose MKV or MP4 export.");
+        var info = await ProbeAsync(video, cancellationToken);
         string language = options.Language switch { "es" => "spa", "en" => "eng", "zh" => "zho", "ja" => "jpn", "ar" => "ara", _ => "und" };
         var args = new List<string> { "-i", Path.GetFullPath(video), "-i", Path.GetFullPath(audio) };
         if (options.Subtitles is not null) args.AddRange(["-i", Path.GetFullPath(options.Subtitles)]);
@@ -105,10 +106,11 @@ public sealed class FFmpegMediaEngine(IProcessRunner runner, IRuntimeLocator loc
         if (options.Subtitles is not null) args.AddRange(["-map", "2:s:0", "-c:s", extension == ".mp4" ? "mov_text" : "srt", "-metadata:s:s:0", "language=" + language]);
         args.AddRange(["-c:v", options.CopyVideo ? "copy" : "libx264", "-c:a", "aac", "-b:a", "192k",
             "-metadata:s:a:0", "title=OpenDub", "-metadata:s:a:0", "language=" + language, "-disposition:a", "0", "-disposition:a:0", "default"]);
-        if (!options.CopyVideo) args.AddRange(["-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p"]);
+        if (!options.CopyVideo) args.AddRange(["-preset", "medium", "-crf", "18", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", "-pix_fmt", "yuv420p"]);
         if (extension == ".mp4") args.AddRange(["-movflags", "+faststart"]);
         args.AddRange(["-f", extension == ".mp4" ? "mp4" : "matroska"]);
-        return WriteMediaAsync(output, args, progress, null, cancellationToken);
+        args.AddRange(["-t", Seconds(info.Duration)]);
+        await WriteMediaAsync(output, args, progress, info.Duration, cancellationToken);
     }
 
     public Task StretchAsync(string input, string output, double rate, CancellationToken cancellationToken)
@@ -167,7 +169,7 @@ public sealed class FFmpegMediaEngine(IProcessRunner runner, IRuntimeLocator loc
             cancellationToken.ThrowIfCancellationRequested();
             if (!File.Exists(temporary) || new FileInfo(temporary).Length == 0) throw new MediaProcessingException("The output file was not generated.");
             File.Move(temporary, output, true);
-            progress?.Report(new(1, "Procesamiento multimedia completado"));
+            progress?.Report(new(1, "Media processing complete."));
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }

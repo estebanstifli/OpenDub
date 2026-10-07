@@ -178,11 +178,11 @@ public partial class MainViewModel
     private async Task RegenerateCoreAsync(bool fitDuration, CancellationToken ct)
     {
         if (SelectedSegment is null) return;
+        StopRequested?.Invoke(); DubPreviewPath = null;
         AppendActivity(L[fitDuration ? "Regenerating speech with duration adjustment; translation may be rewritten." : "Regenerating speech only; keeping the current translation."]);
         ApplySegmentCore(); string id = SelectedSegment!.Id;
-        Edit(p => p with { Segments = p.Segments.Select(s => s.Id == id ? s with { GeneratedSpeech = null, FittedSpeech = null } : s).ToArray() });
         if (!await SaveCoreAsync(ct)) return;
-        try { await speech.GenerateAsync(session.Project, session.DirectoryPath!, ReportProgress(), ct, id, fitDuration); }
+        try { await speech.GenerateAsync(session.Project, session.DirectoryPath!, ReportProgress(), ct, id, fitDuration, overwriteExisting: true); }
         finally { await session.OpenAsync(session.DirectoryPath!, CancellationToken.None); Refresh(); }
     }
     [RelayCommand] private async Task ReanalyzeAsync() => await RunAsync(async ct =>

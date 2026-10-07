@@ -212,5 +212,11 @@
   "Default export profile": "Perfil de exportación predeterminado",
   "Separate voices from music and effects": "Separar voces de música y efectos",
   "Copying source video into project…": "Copiando el vídeo original al proyecto…",
-  "Export uses the timeline volume and mute settings. Review the mix before exporting.": "La exportación usa el volumen y silenciamiento del timeline. Revisa la mezcla antes de exportar."
+  "Export uses the timeline volume and mute settings. Review the mix before exporting.": "La exportación usa el volumen y silenciamiento del timeline. Revisa la mezcla antes de exportar.",
+  "Duration mismatches: {0}": "Desajustes de duración: {0}",
+  "Review segments: {0}": "Revisar segmentos: {0}",
+  "Allow duration mismatches (speech may overlap)": "Permitir desajustes de duración (pueden solaparse las voces)",
+  "Keeps each WAV at its segment start without moving later segments or cutting speech. Short clips leave silence; long clips may overlap. Missing, outdated or externally modified audio still blocks export.": "Mantiene cada WAV en el inicio de su segmento sin desplazar los siguientes ni recortar la voz. Los clips cortos dejan silencio; los largos pueden solaparse. El audio ausente, desactualizado o modificado externamente sigue bloqueando la exportación.",
+  "Media processing complete.": "Procesamiento multimedia completado.",
+  "Generate or regenerate before exporting: {0}": "Generar o regenerar antes de exportar: {0}"
 }

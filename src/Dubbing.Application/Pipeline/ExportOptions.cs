@@ -7,4 +7,5 @@ public sealed record ExportOptions
     public string? Directory { get; init; }
     public bool KeepOriginalAudio { get; init; }
     public bool EmbedSubtitles { get; init; } = true;
+    public bool AllowDurationMismatch { get; init; }
 }
