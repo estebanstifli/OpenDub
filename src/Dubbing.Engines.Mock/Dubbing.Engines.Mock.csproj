@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Dubbing.Core/Dubbing.Core.csproj" />
+  </ItemGroup>
+</Project>

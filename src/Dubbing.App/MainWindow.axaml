@@ -1,0 +1,278 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Dubbing.App.ViewModels" xmlns:eng="using:Dubbing.Core.Engines" xmlns:prj="using:Dubbing.Core.Projects" xmlns:loc="using:Dubbing.App.Localization" xmlns:controls="using:Dubbing.App.Controls" xmlns:vlc="using:LibVLCSharp.Avalonia" x:Class="Dubbing.App.MainWindow" x:DataType="vm:MainViewModel" Title="{Binding WindowTitle}" Width="1520" Height="1060" MinWidth="1100" MinHeight="820" Background="#0A101C">
+<Window.Resources><loc:LocalizedValueConverter x:Key="LocalizeValue"/></Window.Resources>
+<Window.Styles>
+<Style Selector="ComboBox"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
+<Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style>
+<Style Selector="Border.card"><Setter Property="Background" Value="#101C2D"/><Setter Property="BorderBrush" Value="#283A53"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="9"/></Style>
+<Style Selector="Button"><Setter Property="Background" Value="#17263A"/><Setter Property="BorderBrush" Value="#304661"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="6"/><Setter Property="Padding" Value="12,8"/><Setter Property="FontSize" Value="12"/></Style>
+<Style Selector="Button.primary"><Setter Property="Background" Value="#2876F4"/><Setter Property="BorderBrush" Value="#4C91FF"/></Style>
+<Style Selector="ListBox.nav"><Setter Property="Background" Value="Transparent"/></Style>
+<Style Selector="ListBox.nav ListBoxItem"><Setter Property="Padding" Value="12,14"/><Setter Property="Margin" Value="0,3"/><Setter Property="CornerRadius" Value="7"/></Style>
+<Style Selector="TabControl.pages"><Setter Property="Template"><ControlTemplate><Grid RowDefinitions="0,*"><ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Height="0" Opacity="0" IsHitTestVisible="False"/><ContentPresenter Grid.Row="1" Name="PART_SelectedContentHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Content="{TemplateBinding SelectedContent}" ContentTemplate="{TemplateBinding SelectedContentTemplate}"/></Grid></ControlTemplate></Setter></Style>
+</Window.Styles>
+<Grid ColumnDefinitions="Auto,*">
+<Border Background="#0F1A2B" BorderBrush="#283A53" BorderThickness="0,0,1,0" Width="{Binding SidebarWidth}">
+<Grid RowDefinitions="Auto,Auto,*,Auto" Margin="12,20,12,14" RowSpacing="22">
+<Grid ColumnDefinitions="*,Auto"><StackPanel IsVisible="{Binding SidebarExpanded}"><TextBlock Text="OpenDub" FontSize="22" FontWeight="Bold"/><TextBlock Text="{loc:Loc 'LOCAL DUBBING STUDIO'}" FontSize="9" Foreground="#609BEF" LetterSpacing="1"/></StackPanel><Button Grid.Column="1" Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="{loc:Loc 'Toggle sidebar'}" Padding="8"><controls:LucideIcon Kind="panel-left"/></Button></Grid>
+<ListBox Grid.Row="1" Classes="nav" SelectedIndex="{Binding NavigationIndex}"><ListBoxItem ToolTip.Tip="{loc:Loc 'Studio'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="clapperboard"/><TextBlock Text="{loc:Loc 'Studio'}" IsVisible="{Binding SidebarExpanded}" VerticalAlignment="Center"/></StackPanel></ListBoxItem><ListBoxItem ToolTip.Tip="{loc:Loc 'Segments'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="list"/><TextBlock Text="{loc:Loc 'Segments'}" IsVisible="{Binding SidebarExpanded}" VerticalAlignment="Center"/></StackPanel></ListBoxItem><ListBoxItem ToolTip.Tip="{loc:Loc 'Speakers'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="users"/><TextBlock Text="{loc:Loc 'Speakers'}" IsVisible="{Binding SidebarExpanded}" VerticalAlignment="Center"/></StackPanel></ListBoxItem><ListBoxItem IsVisible="False" ToolTip.Tip="{loc:Loc 'Engines'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="cpu"/><TextBlock Text="{loc:Loc 'Engines'}" IsVisible="{Binding SidebarExpanded}" VerticalAlignment="Center"/></StackPanel></ListBoxItem><ListBoxItem IsVisible="False" ToolTip.Tip="{loc:Loc 'Models'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="download"/><TextBlock Text="{loc:Loc 'Models'}" IsVisible="{Binding SidebarExpanded}" VerticalAlignment="Center"/></StackPanel></ListBoxItem><ListBoxItem ToolTip.Tip="{loc:Loc 'Settings'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="settings"/><TextBlock Text="{loc:Loc 'Settings'}" IsVisible="{Binding SidebarExpanded}" VerticalAlignment="Center"/></StackPanel></ListBoxItem></ListBox>
+<StackPanel Grid.Row="3" Spacing="7" IsEnabled="{Binding CanEdit}"><Button Command="{Binding NewCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="{loc:Loc 'New'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="file-plus"/><TextBlock Text="{loc:Loc 'New'}" IsVisible="{Binding SidebarExpanded}"/></StackPanel></Button><Button Command="{Binding OpenCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="{loc:Loc 'Open'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="folder-open"/><TextBlock Text="{loc:Loc 'Open'}" IsVisible="{Binding SidebarExpanded}"/></StackPanel></Button><Button Command="{Binding ImportVideoCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="{loc:Loc 'Import video'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="upload"/><TextBlock Text="{loc:Loc 'Import video'}" IsVisible="{Binding SidebarExpanded}"/></StackPanel></Button><Button Command="{Binding SaveCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="{loc:Loc 'Save'}"><StackPanel Orientation="Horizontal" Spacing="14"><controls:LucideIcon Kind="save"/><TextBlock Text="{loc:Loc 'Save'}" IsVisible="{Binding SidebarExpanded}"/></StackPanel></Button><TextBlock Text="{loc:Loc 'Local processing · Your media stays here'}" IsVisible="{Binding SidebarExpanded}" TextWrapping="Wrap" Classes="muted" FontSize="10" Margin="4,14,0,0"/></StackPanel>
+</Grid></Border>
+<Grid Grid.Column="1" RowDefinitions="Auto,*,6,155" Margin="22,18,22,16" RowSpacing="10">
+<Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{Binding ProjectName}" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="{Binding Location}" Classes="muted" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="650" HorizontalAlignment="Left"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanEdit}"><Button Command="{Binding AutoDubCommand}" Classes="primary"><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="clapperboard"/><TextBlock Text="{loc:Loc 'Auto dub'}"/></StackPanel></Button><Button Command="{Binding ImportVideoCommand}" ToolTip.Tip="{loc:Loc 'Import video'}" ><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="upload"/><TextBlock Text="{loc:Loc 'Import video'}" VerticalAlignment="Center"/></StackPanel></Button><Button Command="{Binding TranslateCommand}" ToolTip.Tip="{loc:Loc 'Translate'}" ><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="languages"/><TextBlock Text="{loc:Loc 'Translate'}" VerticalAlignment="Center"/></StackPanel></Button><Button Command="{Binding GenerateCommand}" ToolTip.Tip="{loc:Loc 'Generate speech'}" ><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="audio-lines"/><TextBlock Text="{loc:Loc 'Generate speech'}" VerticalAlignment="Center"/></StackPanel></Button><Button Command="{Binding ExportCommand}" ToolTip.Tip="{loc:Loc 'Export'}" Classes="primary"><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="download"/><TextBlock Text="{loc:Loc 'Export'}" VerticalAlignment="Center"/></StackPanel></Button></StackPanel></Grid>
+<TabControl x:Name="Pages" Grid.Row="1" Classes="pages" SelectedIndex="{Binding NavigationIndex}">
+<TabItem Header="{loc:Loc 'Project'}"><Grid RowDefinitions="Auto,*" RowSpacing="12">
+<Border Classes="card" Padding="12,8"><Grid ColumnDefinitions="*,180,220" ColumnSpacing="12">
+<TextBox Text="{Binding ProjectName}" Watermark="{loc:Loc 'Project name'}" IsEnabled="{Binding CanEdit}"/>
+<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="download"/><TextBlock Text="{loc:Loc 'In'}" VerticalAlignment="Center"/><TextBox Text="{Binding SourceLanguage}" Width="105" ToolTip.Tip="{loc:Loc 'Source language'}" IsEnabled="{Binding CanEdit}"/></StackPanel>
+<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="upload"/><TextBlock Text="{loc:Loc 'Out'}" VerticalAlignment="Center"/><ComboBox ItemsSource="{Binding OutputLanguages}" SelectedItem="{Binding TargetLanguage}" Width="135" ToolTip.Tip="{loc:Loc 'Target language'}" IsEnabled="{Binding CanEdit}"/></StackPanel>
+</Grid></Border>
+<Grid Grid.Row="1" ColumnDefinitions="*,8,330">
+<ScrollViewer x:Name="StudioScroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"><Grid RowDefinitions="*,Auto,Auto" RowSpacing="8" Height="{Binding #StudioScroller.Viewport.Height}" MinHeight="590">
+<Border Classes="card" Background="#050A12" ClipToBounds="True"><controls:VideoFrameView x:Name="VideoSurface"/></Border>
+<Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto"><StackPanel Orientation="Horizontal" Spacing="6"><Button Command="{Binding PlayCommand}" ToolTip.Tip="{loc:Loc 'Play'}" Padding="9"><controls:LucideIcon Kind="play"/></Button><Button Command="{Binding PauseCommand}" ToolTip.Tip="{loc:Loc 'Pause'}" Padding="9"><controls:LucideIcon Kind="pause"/></Button><Button Command="{Binding StopPlaybackCommand}" ToolTip.Tip="{loc:Loc 'Stop'}" Padding="9"><controls:LucideIcon Kind="square"/></Button><TextBlock Text="{Binding PlaybackTime}" VerticalAlignment="Center" FontFamily="Consolas" Margin="8,0" Foreground="#A9BEDB"/></StackPanel></Grid>
+<Border Grid.Row="2" Classes="card" Padding="8"><Grid RowDefinitions="Auto,Auto" RowSpacing="4"><Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><controls:LucideIcon Kind="audio-lines"/><TextBlock Text="{loc:Loc 'Timeline'}" FontWeight="SemiBold"/><TextBlock Text="{Binding BackgroundTrackLabel}" Classes="muted" FontSize="10" VerticalAlignment="Center"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5"><Button Command="{Binding ZoomOutCommand}" ToolTip.Tip="{loc:Loc 'Zoom out'}" Padding="9"><controls:LucideIcon Kind="zoom-out"/></Button><TextBlock Text="{Binding ZoomLabel}" VerticalAlignment="Center" MinWidth="28"/><Button Command="{Binding ZoomInCommand}" ToolTip.Tip="{loc:Loc 'Zoom in'}" Padding="9"><controls:LucideIcon Kind="zoom-in"/></Button><Button Command="{Binding FitTimelineCommand}" ToolTip.Tip="{loc:Loc 'Fit timeline'}" Padding="9"><controls:LucideIcon Kind="maximize"/></Button></StackPanel></Grid><Grid Grid.Row="1" ColumnDefinitions="180,*" ColumnSpacing="8"><Grid Margin="0,32,0,0" RowDefinitions="56,56,64" IsEnabled="{Binding CanEdit}"><StackPanel Grid.Row="0" Spacing="0"><TextBlock Text="{Binding OriginalTrackName}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{loc:Loc 'Original dialogue'}"/><Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"><ToggleButton IsChecked="{Binding OriginalVoiceMuted}" Padding="5" ToolTip.Tip="{loc:Loc 'Toggle track sound'}" AutomationProperties.Name="{loc:Loc 'Toggle track sound'}"><controls:LucideIcon Kind="{Binding OriginalSpeakerIcon}"/></ToggleButton><Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding OriginalVoiceGain}" ToolTip.Tip="{Binding OriginalVoiceGain, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"/></Grid></StackPanel><StackPanel Grid.Row="1" Spacing="0"><TextBlock Text="{loc:Loc 'Music, ambience and effects'}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{loc:Loc 'Music, ambience and effects'}"/><Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"><ToggleButton IsChecked="{Binding BackgroundMuted}" Padding="5" ToolTip.Tip="{loc:Loc 'Toggle track sound'}" AutomationProperties.Name="{loc:Loc 'Toggle track sound'}"><controls:LucideIcon Kind="{Binding BackgroundSpeakerIcon}"/></ToggleButton><Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding BackgroundGain}" ToolTip.Tip="{Binding BackgroundGain, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"/></Grid></StackPanel><StackPanel Grid.Row="2" Spacing="0"><TextBlock Text="{Binding DubTrackName}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DubTrackName}"/><Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"><ToggleButton IsChecked="{Binding DubMuted}" Padding="5" ToolTip.Tip="{loc:Loc 'Toggle track sound'}" AutomationProperties.Name="{loc:Loc 'Toggle track sound'}"><controls:LucideIcon Kind="{Binding DubSpeakerIcon}"/></ToggleButton><Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding VoiceGain}" ToolTip.Tip="{Binding VoiceGain, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"/></Grid></StackPanel></Grid><ScrollViewer x:Name="TimelineScroller" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><controls:TimelineControl x:Name="Timeline" Height="208" Gutter="0" Width="{Binding TimelineWidth}" Segments="{Binding TimelineSegments}" Peaks="{Binding WaveformPeaks}" BackgroundPeaks="{Binding BackgroundPeaks}" Duration="{Binding VideoDuration}" Playhead="{Binding Playhead}" SourceLabel="" BackgroundLabel="" SegmentLabel=""/></ScrollViewer></Grid></Grid></Border>
+</Grid></ScrollViewer><GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" Background="#263A52"/><Border Grid.Column="2" Classes="card" Padding="8"><Grid RowDefinitions="Auto,*" RowSpacing="10"><StackPanel Orientation="Horizontal" Spacing="8" Margin="8,5"><controls:LucideIcon Kind="sliders-horizontal"/><TextBlock Text="{Binding SelectedSegmentTitle}" FontWeight="SemiBold"/></StackPanel><Grid Grid.Row="1"><ScrollViewer IsEnabled="{Binding CanEdit}">
+              <StackPanel Spacing="8" Margin="12,0,6,16">
+                
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                  <StackPanel>
+                    <TextBlock Text="{loc:Loc 'Start (seconds)'}" />
+                    <NumericUpDown Value="{Binding Editor.StartSeconds}" FormatString="F2" Minimum="0" Maximum="100000000" Increment="0.05" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{loc:Loc 'End (seconds)'}" />
+                    <NumericUpDown Value="{Binding Editor.EndSeconds}" FormatString="F2" Minimum="0" Maximum="100000000" Increment="0.05" />
+                  </StackPanel>
+                </Grid>
+                <TextBlock Text="{loc:Loc 'Original'}" />
+                <TextBox Text="{Binding Editor.SourceText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" />
+                <TextBlock Text="{loc:Loc 'Translation'}" />
+                <TextBox Text="{Binding Editor.TranslationText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" />
+                <TextBlock Text="{loc:Loc 'Speaker'}" />
+                <ComboBox ItemsSource="{Binding Speakers}" SelectedItem="{Binding Editor.Speaker}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="prj:SpeakerProfile">
+                      <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+<WrapPanel HorizontalAlignment="Right">                <Button Command="{Binding ModifyDetailCommand}"><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="sliders-horizontal"/><TextBlock Text="{loc:Loc 'Modify detail'}"/></StackPanel></Button>
+
+                  <Button Command="{Binding RegenerateCommand}" ToolTip.Tip="{loc:Loc 'Generate speech using the current translation only.'}" Margin="0,0,6,4" ><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="audio-lines"/><TextBlock Text="{loc:Loc 'Regenerate TTS'}"/></StackPanel></Button>
+                  <Button Command="{Binding RegenerateAndFitCommand}" ToolTip.Tip="{loc:Loc 'Regenerate speech and adjust duration; may rewrite unlocked translations.'}" Margin="0,0,6,4" ><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="refresh-cw"/><TextBlock Text="{loc:Loc 'Regenerate and fit'}"/></StackPanel></Button>
+</WrapPanel>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid></Grid></Border></Grid>
+</Grid></TabItem><TabItem Header="{loc:Loc 'Segments'}"><Grid ColumnDefinitions="*,8,330" Margin="0,12,0,0">
+<Border Classes="card" Padding="8"><Grid RowDefinitions="Auto,*">
+<Grid ColumnDefinitions="*,*" Margin="24,8"><TextBlock Text="{loc:Loc 'Original'}" FontSize="18" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{loc:Loc 'Translation'}" FontSize="18" FontWeight="SemiBold"/></Grid>
+<ListBox x:Name="SegmentTextList" Grid.Row="1" ItemsSource="{Binding Segments}" SelectedItem="{Binding SelectedSegment}" AutoScrollToSelectedItem="True" Background="Transparent" IsEnabled="{Binding CanEdit}">
+<ListBox.ItemTemplate><DataTemplate x:DataType="vm:SegmentViewModel">
+<Grid ColumnDefinitions="18,*,*" ColumnSpacing="10" Margin="0,6">
+<TextBlock Text="▶" Foreground="White" IsVisible="{Binding IsActive}" VerticalAlignment="Center"/>
+<StackPanel Grid.Column="1" Spacing="6"><TextBlock Text="{Binding Number, StringFormat='{}{0}'}" FontWeight="Bold"/><TextBlock Text="{Binding Timing}" Foreground="#64D8CB" FontSize="11"/>
+<TextBox Text="{Binding SourceText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" GotFocus="SegmentTextFocused"/>
+<TextBlock Text="{Binding Speaker}" Classes="muted"/></StackPanel>
+<StackPanel Grid.Column="2" Spacing="6"><TextBlock Text="{Binding Number, StringFormat='{}{0}'}" FontWeight="Bold"/><TextBlock Text="{Binding Timing}" Foreground="#64D8CB" FontSize="11"/>
+<TextBox Text="{Binding TranslationText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" GotFocus="SegmentTextFocused"/>
+<TextBlock Text="{Binding State}" Classes="muted" FontSize="11"/></StackPanel>
+</Grid></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+<GridSplitter Grid.Column="1" Width="5" Background="#263A52"/>
+<Border Grid.Column="2" Classes="card" Padding="10"><ScrollViewer><StackPanel Spacing="10">
+<Border Background="#050A12" Height="185"><Image x:Name="SegmentVideo" Stretch="Uniform"/></Border>
+<StackPanel Orientation="Horizontal" Spacing="6"><Button Command="{Binding PlayCommand}" ToolTip.Tip="{loc:Loc 'Play'}"><controls:LucideIcon Kind="play"/></Button><Button Command="{Binding PauseCommand}" ToolTip.Tip="{loc:Loc 'Pause'}"><controls:LucideIcon Kind="pause"/></Button><Button Command="{Binding StopPlaybackCommand}" ToolTip.Tip="{loc:Loc 'Stop'}"><controls:LucideIcon Kind="square"/></Button></StackPanel>
+<TextBlock Text="{Binding PlaybackTime}" FontFamily="Consolas"/>
+<Grid Margin="0" RowDefinitions="56,56,64" IsEnabled="{Binding CanEdit}"><StackPanel Grid.Row="0" Spacing="0"><TextBlock Text="{Binding OriginalTrackName}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{loc:Loc 'Original dialogue'}"/><Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"><ToggleButton IsChecked="{Binding OriginalVoiceMuted}" Padding="5" ToolTip.Tip="{loc:Loc 'Toggle track sound'}" AutomationProperties.Name="{loc:Loc 'Toggle track sound'}"><controls:LucideIcon Kind="{Binding OriginalSpeakerIcon}"/></ToggleButton><Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding OriginalVoiceGain}" ToolTip.Tip="{Binding OriginalVoiceGain, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"/></Grid></StackPanel><StackPanel Grid.Row="1" Spacing="0"><TextBlock Text="{loc:Loc 'Music, ambience and effects'}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{loc:Loc 'Music, ambience and effects'}"/><Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"><ToggleButton IsChecked="{Binding BackgroundMuted}" Padding="5" ToolTip.Tip="{loc:Loc 'Toggle track sound'}" AutomationProperties.Name="{loc:Loc 'Toggle track sound'}"><controls:LucideIcon Kind="{Binding BackgroundSpeakerIcon}"/></ToggleButton><Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding BackgroundGain}" ToolTip.Tip="{Binding BackgroundGain, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"/></Grid></StackPanel><StackPanel Grid.Row="2" Spacing="0"><TextBlock Text="{Binding DubTrackName}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DubTrackName}"/><Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"><ToggleButton IsChecked="{Binding DubMuted}" Padding="5" ToolTip.Tip="{loc:Loc 'Toggle track sound'}" AutomationProperties.Name="{loc:Loc 'Toggle track sound'}"><controls:LucideIcon Kind="{Binding DubSpeakerIcon}"/></ToggleButton><Slider Grid.Column="1" Minimum="0" Maximum="2" Value="{Binding VoiceGain}" ToolTip.Tip="{Binding VoiceGain, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"/></Grid></StackPanel></Grid><TextBlock Text="{Binding SelectedSegmentTitle}" FontWeight="SemiBold"/>
+<StackPanel IsEnabled="{Binding CanEdit}"><WrapPanel HorizontalAlignment="Right">                <Button Command="{Binding ModifyDetailCommand}"><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="sliders-horizontal"/><TextBlock Text="{loc:Loc 'Modify detail'}"/></StackPanel></Button>
+
+                  <Button Command="{Binding RegenerateCommand}" ToolTip.Tip="{loc:Loc 'Generate speech using the current translation only.'}" Margin="0,0,6,4" ><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="audio-lines"/><TextBlock Text="{loc:Loc 'Regenerate TTS'}"/></StackPanel></Button>
+                  <Button Command="{Binding RegenerateAndFitCommand}" ToolTip.Tip="{loc:Loc 'Regenerate speech and adjust duration; may rewrite unlocked translations.'}" Margin="0,0,6,4" ><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="refresh-cw"/><TextBlock Text="{loc:Loc 'Regenerate and fit'}"/></StackPanel></Button>
+</WrapPanel></StackPanel>
+</StackPanel></ScrollViewer></Border></Grid></TabItem><TabItem Header="{loc:Loc 'Speakers'}">
+        <Grid ColumnDefinitions="300,*" Margin="0,16" ColumnSpacing="24">
+          <ListBox ItemsSource="{Binding Speakers}" SelectedItem="{Binding SelectedSpeaker}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="prj:SpeakerProfile">
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <ScrollViewer Grid.Column="1"><StackPanel Spacing="12">
+            <TextBlock Text="{loc:Loc 'Speaker name'}" />
+            <TextBox Text="{Binding SpeakerName}" />
+            <WrapPanel>
+              <Button Content="{loc:Loc 'Rename'}" Command="{Binding RenameSpeakerCommand}" Margin="0,0,6,4" />
+              <Button Content="{loc:Loc 'New speaker'}" Command="{Binding NewSpeakerCommand}" Margin="0,0,6,4" />
+            </WrapPanel>
+            <TextBlock Text="{loc:Loc 'Voice reference'}" />
+            <TextBlock Text="{Binding ReferencePath}" TextWrapping="Wrap" />
+            <TextBlock Text="{loc:Loc 'Imported or manually chosen speaker references override the original voice. Source emotion can still be transferred.'}" TextWrapping="Wrap" Classes="muted" />
+            <WrapPanel>
+              <Button Content="{loc:Loc 'Import reference'}" Command="{Binding ImportReferenceCommand}" Margin="0,0,6,4" />
+              <Button Content="{loc:Loc 'Preview reference'}" Command="{Binding PreviewReferenceCommand}" Margin="0,0,6,4" />
+            </WrapPanel>
+            <TextBlock Text="{loc:Loc 'Detected speaker segments'}" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding SpeakerSegments}" IsEnabled="{Binding CanEdit}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:SpeakerSegmentItem">
+              <Border Classes="card" Padding="8" Margin="0,0,0,6"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <Button Command="{Binding PlayCommand}" ToolTip.Tip="{loc:Loc 'Play'}"><controls:LucideIcon Kind="play"/></Button>
+                <StackPanel Grid.Column="1"><TextBlock Text="{Binding Timing}" Classes="muted"/><TextBlock Text="{Binding Text}" TextWrapping="Wrap"/></StackPanel>
+                <Button Grid.Column="2" Content="{Binding SelectionLabel}" Command="{Binding SelectCommand}" VerticalAlignment="Center"/>
+              </Grid></Border>
+            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <TextBlock Text="{loc:Loc 'Merge into'}" />
+            <ComboBox ItemsSource="{Binding Speakers}" SelectedItem="{Binding MergeTarget}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="prj:SpeakerProfile">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="{loc:Loc 'Merge speakers'}" Command="{Binding MergeSpeakersCommand}" Margin="0,0,6,4" />
+          </StackPanel></ScrollViewer>
+        </Grid>
+      </TabItem>
+      <TabItem Header="{loc:Loc 'Engines'}">
+        <ScrollViewer>
+          <StackPanel Spacing="10" Margin="12,16"><Button Content="{loc:Loc 'Settings'}" Command="{Binding NavigateCommand}" CommandParameter="5"/>
+            <Border Classes="card" Padding="14"><StackPanel Spacing="8"><TextBlock Text="{loc:Loc 'Dialogue grouping'}" FontWeight="SemiBold"/><CheckBox Content="{loc:Loc 'Normalize segments after analysis'}" IsChecked="{Binding NormalizeSegments}"/><CheckBox Content="{loc:Loc 'Group into paragraphs (up to 30 seconds)'}" IsChecked="{Binding ParagraphSegments}"/><Button Command="{Binding NormalizeDialogueCommand}" ToolTip.Tip="{loc:Loc 'Normalize existing segments'}" ><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="scissors"/><TextBlock Text="{loc:Loc 'Normalize existing segments'}" VerticalAlignment="Center"/></StackPanel></Button><TextBlock Text="{loc:Loc 'Groups compatible dialogue by speaker, punctuation and pauses. Locked translations and generated audio stay unchanged.'}" TextWrapping="Wrap" Classes="muted"/></StackPanel></Border><ItemsControl ItemsSource="{Binding Engines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:EngineRowViewModel">
+                  <Grid ColumnDefinitions="180,*" Margin="0,5">
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="eng:EngineDescriptor">
+                          <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel IsVisible="{Binding IsOllamaSelected}" Spacing="8">
+              <TextBlock Text="{loc:Loc 'Ollama model'}" />
+              <ComboBox ItemsSource="{Binding OllamaModels}" SelectedItem="{Binding SelectedOllamaModel}" HorizontalAlignment="Stretch" />
+              <Button Content="{loc:Loc 'Refresh Ollama models'}" Command="{Binding RefreshOllamaModelsCommand}" />
+              <TextBlock Text="{Binding OllamaStatus}" TextWrapping="Wrap" />
+            </StackPanel>
+            <CheckBox Content="{loc:Loc 'Use each source segment as voice reference'}" IsChecked="{Binding UseSourceVoicePerSegment}" />
+            <TextBlock Text="{loc:Loc 'Source voice uses the original segment for timbre. Source emotion transfers its delivery. Disable source voice to use the speaker reference instead.'}" TextWrapping="Wrap" />
+            <TextBlock Text="{loc:Loc 'Audio tracks and mix'}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding AudioTrackSummary}" TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Content="{loc:Loc 'Configure audio tracks'}" Command="{Binding ConfigureAudioTracksCommand}" Margin="0,0,8,6" />
+              <Button Content="{loc:Loc 'Prepare audio'}" Command="{Binding PrepareAudioCommand}" Margin="0,0,8,6" />
+            </WrapPanel>
+            <CheckBox Content="{loc:Loc 'Source separation'}" IsChecked="{Binding UseSeparation}" />
+            <TextBlock Text="{Binding AudioPreparationStatus}" TextWrapping="Wrap" />
+            <TextBlock Text="{loc:Loc 'Prepare audio preserves segments, translations and generated speech. Play dub and export share these gains and mute settings.'}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="180,130,150,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+              <TextBlock Text="{loc:Loc 'Original dialogue'}" VerticalAlignment="Center" />
+              <NumericUpDown Grid.Column="1" Value="{Binding OriginalVoiceGain}" Minimum="0" Maximum="3" Increment="0.05" />
+              <CheckBox Grid.Column="2" Content="{loc:Loc 'Mute'}" IsChecked="{Binding OriginalVoiceMuted}" />
+              <Button Grid.Column="3" Content="{loc:Loc 'Listen solo'}" Command="{Binding ListenOriginalVoiceCommand}" />
+              <TextBlock Grid.Row="1" Text="{loc:Loc 'Dubbed dialogue'}" VerticalAlignment="Center" />
+              <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding VoiceGain}" Minimum="0" Maximum="3" Increment="0.05" />
+              <CheckBox Grid.Row="1" Grid.Column="2" Content="{loc:Loc 'Mute'}" IsChecked="{Binding DubMuted}" />
+              <Button Grid.Row="1" Grid.Column="3" Content="{loc:Loc 'Listen solo'}" Command="{Binding ListenDubCommand}" />
+              <TextBlock Grid.Row="2" Text="{loc:Loc 'Music, ambience and effects'}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding BackgroundGain}" Minimum="0" Maximum="3" Increment="0.05" />
+              <CheckBox Grid.Row="2" Grid.Column="2" Content="{loc:Loc 'Mute'}" IsChecked="{Binding BackgroundMuted}" />
+              <Button Grid.Row="2" Grid.Column="3" Content="{loc:Loc 'Listen solo'}" Command="{Binding ListenBackgroundCommand}" />
+            </Grid>
+            <TextBlock Text="{loc:Loc 'Solo is for listening only. Missing background is never replaced with the original mixed audio.'}" TextWrapping="Wrap" />
+            <CheckBox Content="{loc:Loc 'Word alignment'}" IsChecked="{Binding UseAlignment}" />
+            <CheckBox Content="{loc:Loc 'Automatic voice references'}" IsChecked="{Binding AutomaticReferences}" />
+            <CheckBox Content="{loc:Loc 'Transfer source emotion'}" IsChecked="{Binding AutomaticEmotion}" />
+            <Button Content="{loc:Loc 'Exclude segments without speakers'}" Command="{Binding ExcludeUnassignedSegmentsCommand}" />
+            <Button Content="{loc:Loc 'Review repetitive transcription'}" Command="{Binding ReviewTranscriptCommand}" />
+            <TextBlock Text="{loc:Loc 'Conservatively excludes long repetitions without a detected speaker. Keeps text and timing for manual review.'}" TextWrapping="Wrap" Classes="muted" />
+            <Button Content="{loc:Loc 'Reanalyze'}" Command="{Binding ReanalyzeCommand}" Margin="0,0,6,4" />
+            <TextBlock Text="{loc:Loc 'Duration tolerance'}" />
+            <NumericUpDown Value="{Binding DurationTolerance}" Minimum="0.001" Maximum="0.5" Increment="0.01" />
+            <TextBlock Text="{loc:Loc 'Maximum time stretch'}" />
+            <NumericUpDown Value="{Binding MaximumTimeStretch}" Minimum="0" Maximum="0.2" Increment="0.01" />
+            <TextBlock Text="{loc:Loc 'Export format'}" />
+            <ComboBox ItemsSource="{Binding ExportContainers}" SelectedItem="{Binding ExportContainer}" />
+            <TextBlock Text="{loc:Loc 'Glossary (JSON)'}" />
+            <TextBox Text="{Binding GlossaryJson}" AcceptsReturn="True" MinHeight="100" />
+            <Button Content="{loc:Loc 'Apply glossary'}" Command="{Binding ApplyGlossaryCommand}" Margin="0,0,6,4" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="{loc:Loc 'Models'}">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16" Margin="0,16">
+          <StackPanel Orientation="Horizontal">
+            <Button Content="{loc:Loc 'Settings'}" Command="{Binding NavigateCommand}" CommandParameter="5"/><Button Content="{loc:Loc 'Refresh'}" Command="{Binding RefreshModelsCommand}" Margin="0,0,6,4" />
+            <Button Content="{loc:Loc 'Install'}" Command="{Binding InstallModelCommand}" Margin="0,0,6,4" />
+            <Button Content="{loc:Loc 'Verify'}" Command="{Binding VerifyModelCommand}" Margin="0,0,6,4" />
+            <Button Content="{loc:Loc 'Remove'}" Command="{Binding RemoveModelCommand}" Margin="0,0,6,4" />
+            <Button Content="{loc:Loc 'Use for translation'}" Command="{Binding UseTranslationModelCommand}" Margin="0,0,6,4" />
+          </StackPanel>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ModelRow">
+                <Border Padding="14">
+                  <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding DisplayName}" FontSize="18" />
+                      <TextBlock Grid.Column="1" Text="{Binding State}" Foreground="#64D8CB" />
+                    </Grid>
+                    <TextBlock Text="{Binding Detail}" />
+                    <TextBlock Text="{Binding Source}" Classes="muted" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <TextBlock Grid.Row="2" Text="{loc:Loc 'Models download only when you select Install. Check the source license before use.'}" Classes="muted" />
+        </Grid>
+      </TabItem>
+      <TabItem Header="{loc:Loc 'Settings'}">
+        <ScrollViewer>
+          <StackPanel Spacing="10" Margin="12,16">
+            <TextBlock Text="{loc:Loc 'UI language'}" />
+            <ComboBox ItemsSource="{Binding UiLanguages}" SelectedItem="{Binding Settings.UiLanguage}" />
+            <TextBlock Text="{loc:Loc 'Default output language'}"/><ComboBox ItemsSource="{Binding OutputLanguages}" SelectedItem="{Binding Settings.DefaultTargetLanguage}"/>
+            <TextBlock Text="{loc:Loc 'Default export profile'}"/><ComboBox ItemsSource="{Binding Settings.ExportProfiles}" SelectedItem="{Binding Settings.DefaultExportProfile}"/>
+            <CheckBox Content="{loc:Loc 'Copy source video into project'}" IsChecked="{Binding Settings.CopySourceVideo}"/>
+            <TextBlock Text="{loc:Loc 'Projects folder (blank: automatic)'}"/><TextBox Text="{Binding Settings.ProjectsDirectory}"/>
+            <TextBlock Text="{loc:Loc 'Model directory'}"/><TextBox Text="{Binding Settings.ModelDirectory}"/>
+            <TextBlock Text="{Binding SetupSummary}" TextWrapping="Wrap"/>
+            <WrapPanel><Button Content="{loc:Loc 'Prepare OpenDub'}" Command="{Binding SetupCommand}"/><Button Content="{loc:Loc 'Save settings'}" Command="{Binding SaveSettingsCommand}"/></WrapPanel>
+            <Expander Header="{loc:Loc 'Advanced'}" HorizontalAlignment="Stretch"><StackPanel Spacing="10">
+            <WrapPanel><Button Content="{loc:Loc 'Engines'}" Command="{Binding NavigateCommand}" CommandParameter="3"/><Button Content="{loc:Loc 'Models'}" Command="{Binding NavigateCommand}" CommandParameter="4"/></WrapPanel>
+            <TextBlock Text="{loc:Loc 'Backend'}"/><ComboBox ItemsSource="{Binding Settings.Backends}" SelectedItem="{Binding Settings.Backend}"/>
+            <TextBlock Text="{loc:Loc 'Translation backend'}"/><ComboBox ItemsSource="{Binding Settings.TranslationBackends}" SelectedItem="{Binding Settings.TranslationBackend}"/>
+            <TextBlock Text="{loc:Loc 'Threads'}"/><NumericUpDown Value="{Binding Settings.Threads}" Minimum="1" Maximum="1024"/>
+            <TextBlock Text="{loc:Loc 'Device'}"/><NumericUpDown Value="{Binding Settings.Device}" Minimum="0" Maximum="16"/>
+            <TextBlock Text="{loc:Loc 'Audio server executable'}" />
+            <TextBox Text="{Binding Settings.AudioServerPath}" />
+            <TextBlock Text="{loc:Loc 'Audio CLI executable'}" />
+            <TextBox Text="{Binding Settings.AudioCliPath}" />
+            <TextBlock Text="{loc:Loc 'Translation server executable'}" />
+            <TextBox Text="{Binding Settings.LlamaServerPath}" />
+            <TextBlock Text="{loc:Loc 'Translation GGUF'}" />
+            <TextBox Text="{Binding Settings.TranslationModelPath}" />
+            <TextBlock Text="{loc:Loc 'FFmpeg executable'}" />
+            <TextBox Text="{Binding Settings.FFmpegPath}" />
+            <TextBlock Text="{loc:Loc 'FFprobe executable'}" />
+            <TextBox Text="{Binding Settings.FFprobePath}" />
+            <WrapPanel>
+              <Button Content="{loc:Loc 'Save settings'}" Command="{Binding SaveSettingsCommand}" Margin="0,0,6,4" />
+              <Button Content="{loc:Loc 'Inspect runtimes'}" Command="{Binding InspectRuntimesCommand}" Margin="0,0,6,4" />
+              <Button Content="{loc:Loc 'Unload models'}" Command="{Binding UnloadModelsCommand}" Margin="0,0,6,4" />
+              <Button Content="{loc:Loc 'Clear generated cache'}" Command="{Binding ClearCacheCommand}" Margin="0,0,6,4" />
+            </WrapPanel>
+            <TextBox Text="{Binding Diagnostics}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" />
+            </StackPanel></Expander>
+            <TextBlock Text="OpenDub 0.1.0" Classes="muted"/>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+<GridSplitter Grid.Row="2" VerticalAlignment="Center" ResizeBehavior="PreviousAndNext" Height="5" HorizontalAlignment="Stretch" ResizeDirection="Rows" Background="#273A53"/>
+<Border Grid.Row="3" Classes="card" Padding="12,8" MinHeight="70"><Grid RowDefinitions="Auto,*" RowSpacing="7"><Grid ColumnDefinitions="Auto,*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><controls:LucideIcon Kind="list"/><TextBlock Text="{loc:Loc 'Activity'}" FontWeight="SemiBold"/><CheckBox Content="{loc:Loc 'Follow'}" IsChecked="{Binding FollowActivity}" Margin="8,0" MinHeight="24"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Status}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="12,0" Classes="muted"/><StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"><ProgressBar Width="100" Value="{Binding Progress}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center"/><Button Command="{Binding ClearActivityCommand}" ToolTip.Tip="{loc:Loc 'Clear activity'}" Padding="9"><controls:LucideIcon Kind="x"/></Button><Button Content="{loc:Loc 'Cancel'}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/></StackPanel></Grid><TextBox x:Name="ActivityBox" Grid.Row="1" Text="{Binding ActivityText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="11" Background="#0A1321" BorderThickness="0" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"/></Grid></Border>
+</Grid></Grid></Window>

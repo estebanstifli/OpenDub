@@ -1,0 +1,43 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore DubbingApp.sln --locked-mode
+      - run: dotnet build DubbingApp.sln -c Release --no-restore
+      - run: dotnet test DubbingApp.sln -c Release --no-build --logger trx
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: '**/TestResults/*.trx'
+  media:
+    runs-on: ubuntu-latest
+    env:
+      FFMPEG_TESTS: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Install test media tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: dotnet restore DubbingApp.sln --locked-mode
+      - run: dotnet test DubbingApp.sln -c Release --no-restore --logger trx

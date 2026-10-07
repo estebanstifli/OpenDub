@@ -1,0 +1,42 @@
+name: Package OpenDub
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-22.04
+            rid: linux-x64
+          - os: macos-14
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Linux desktop and VLC build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libvlc-dev vlc-plugin-base vlc-plugin-video-output libfuse2 patchelf libfontconfig1 libice6 libsm6 libx11-6
+      - run: dotnet restore DubbingApp.sln --locked-mode
+      - run: dotnet test DubbingApp.sln -c Release --no-restore
+      - name: Build self-contained package with pinned native tools
+        shell: pwsh
+        run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}' -Archive -AudioCuda:($IsWindows)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenDub-${{ matrix.rid }}
+          path: |
+            artifacts/releases/*.zip
+            artifacts/releases/*.tar.gz
+            artifacts/releases/*.dmg
+            artifacts/releases/*.AppImage
+          if-no-files-found: error

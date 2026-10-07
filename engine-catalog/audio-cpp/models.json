@@ -1,0 +1,232 @@
+[
+  {
+    "languageNames": {
+      "ko": "Korean",
+      "fi": "Finnish",
+      "hi": "Hindi",
+      "it": "Italian",
+      "pt": "Portuguese",
+      "tr": "Turkish",
+      "zh": "Chinese",
+      "ar": "Arabic",
+      "nl": "Dutch",
+      "hu": "Hungarian",
+      "yue": "Cantonese",
+      "ru": "Russian",
+      "fa": "Persian",
+      "el": "Greek",
+      "es": "Spanish",
+      "ro": "Romanian",
+      "da": "Danish",
+      "ms": "Malay",
+      "fil": "Filipino",
+      "id": "Indonesian",
+      "vi": "Vietnamese",
+      "en": "English",
+      "sv": "Swedish",
+      "th": "Thai",
+      "mk": "Macedonian",
+      "cs": "Czech",
+      "ja": "Japanese",
+      "pl": "Polish",
+      "fr": "French",
+      "de": "German"
+    },
+    "task": "Transcription",
+    "files": [
+      {
+        "url": "https://huggingface.co/audio-cpp/audio.cpp-gguf/resolve/e36610ac69b5262e914a52635324050bee8f1ad2/Qwen3-ASR-0.6B-GGUF/qwen3-asr-0.6b-q8_0.gguf",
+        "path": "Qwen3-ASR-0.6B-GGUF/qwen3-asr-0.6b-q8_0.gguf",
+        "size": 1151272416,
+        "sha256": "6c44ec2fb4cee513892d7863c1fcc3ea6b699ffa4d899b0ef4ab19956d9544f7"
+      }
+    ],
+    "displayName": "Qwen3-ASR 0.6B Q8_0 GGUF",
+    "id": "qwen3_asr_0_6b_q8_0",
+    "provider": "audio.cpp",
+    "family": "qwen3_asr",
+    "license": "See source model license",
+    "languages": [
+      "zh",
+      "en",
+      "yue",
+      "ar",
+      "de",
+      "fr",
+      "es",
+      "pt",
+      "id",
+      "it",
+      "ko",
+      "ru",
+      "th",
+      "vi",
+      "ja",
+      "tr",
+      "hi",
+      "ms",
+      "nl",
+      "sv",
+      "da",
+      "fi",
+      "pl",
+      "cs",
+      "fil",
+      "fa",
+      "el",
+      "hu",
+      "mk",
+      "ro",
+      "zh dialects"
+    ],
+    "fieldMappings": {},
+    "capabilities": {},
+    "version": "0.9.0/e36610ac69b5262e914a52635324050bee8f1ad2",
+    "source": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
+    "entryPoint": "Qwen3-ASR-0.6B-GGUF/qwen3-asr-0.6b-q8_0.gguf"
+  },
+  {
+    "languageNames": {
+      "de": "German",
+      "zh": "Chinese",
+      "pt": "Portuguese",
+      "en": "English",
+      "it": "Italian",
+      "es": "Spanish",
+      "ru": "Russian",
+      "fr": "French",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "yue": "Cantonese"
+    },
+    "task": "Alignment",
+    "files": [
+      {
+        "url": "https://huggingface.co/audio-cpp/audio.cpp-gguf/resolve/e36610ac69b5262e914a52635324050bee8f1ad2/Qwen3-ForcedAligner-0.6B-GGUF/qwen3-forced-aligner-0.6b-q8_0.gguf",
+        "path": "Qwen3-ForcedAligner-0.6B-GGUF/qwen3-forced-aligner-0.6b-q8_0.gguf",
+        "size": 1129966496,
+        "sha256": "75209490b11cec2b0db749ca5f4ff92266f58efd30f7fd04d9eb2a3ac9cc929f"
+      }
+    ],
+    "displayName": "Qwen3 Forced Aligner 0.6B Q8_0 GGUF",
+    "id": "qwen3_forced_aligner_0_6b_q8_0",
+    "provider": "audio.cpp",
+    "family": "qwen3_forced_aligner",
+    "license": "See source model license",
+    "languages": [
+      "zh",
+      "en",
+      "yue",
+      "fr",
+      "de",
+      "it",
+      "ja",
+      "ko",
+      "pt",
+      "ru",
+      "es"
+    ],
+    "fieldMappings": {},
+    "capabilities": {
+      "supportsWordTimestamps": true
+    },
+    "version": "0.9.0/e36610ac69b5262e914a52635324050bee8f1ad2",
+    "source": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
+    "entryPoint": "Qwen3-ForcedAligner-0.6B-GGUF/qwen3-forced-aligner-0.6b-q8_0.gguf"
+  },
+  {
+    "languageNames": {},
+    "task": "Diarization",
+    "files": [
+      {
+        "url": "https://huggingface.co/audio-cpp/Nemotron-3-Diarization-GGUF/resolve/647d39feaa0e91dca5ce355a95403837b76dff56/nemotron-3-diarization-q8_0.gguf",
+        "path": "Nemotron-3-Diarization-GGUF/nemotron-3-diarization-q8_0.gguf",
+        "size": 106675136,
+        "sha256": "9a737455bd10123bcf1e036d9a0b07b6e8c42e7d0dd1a5ee4141dc386db46d0b"
+      }
+    ],
+    "displayName": "Nemotron 3 Diarization Q8_0 GGUF",
+    "id": "nemotron_3_diar_q8_0",
+    "provider": "audio.cpp",
+    "family": "nemotron_3_diar",
+    "license": "See source model license",
+    "languages": [
+      "multilingual"
+    ],
+    "fieldMappings": {},
+    "capabilities": {
+      "maxSpeakers": 8
+    },
+    "version": "0.9.0/647d39feaa0e91dca5ce355a95403837b76dff56",
+    "source": "https://huggingface.co/audio-cpp/Nemotron-3-Diarization-GGUF",
+    "entryPoint": "Nemotron-3-Diarization-GGUF/nemotron-3-diarization-q8_0.gguf"
+  },
+  {
+    "languageNames": {},
+    "task": "Tts",
+    "files": [
+      {
+        "url": "https://huggingface.co/audio-cpp/audio.cpp-gguf/resolve/e36610ac69b5262e914a52635324050bee8f1ad2/IndexTTS2.5-GGUF/index-tts2_5-q8_0.gguf",
+        "path": "IndexTTS2.5-GGUF/index-tts2_5-q8_0.gguf",
+        "size": 3502955328,
+        "sha256": "5e827b2072042e4a1b21ccf24a5cb4f71cb1011403067a0a9b039311d8b38628"
+      }
+    ],
+    "displayName": "IndexTTS2.5 Q8_0 GGUF",
+    "id": "index_tts2_5_q8_0",
+    "provider": "audio.cpp",
+    "family": "index_tts2",
+    "license": "See source model license",
+    "languages": [
+      "zh",
+      "en",
+      "ja",
+      "es",
+      "ar"
+    ],
+    "fieldMappings": {
+      "emotionIntensity": "emotion_alpha",
+      "emotionAudio": "audio",
+      "emotionText": "emotion_text",
+      "emotionTextEnabled": "use_emotion_text",
+      "emotionVector": "emotion_vector"
+    },
+    "capabilities": {
+      "supportsEmotionInstruction": true,
+      "supportsSpeakingRate": true,
+      "supportsEmotionVector": true,
+      "supportsVoiceCloning": true,
+      "supportsSeed": true,
+      "supportsEmotionLabels": true,
+      "supportsEmotionReferenceAudio": true
+    },
+    "version": "0.9.0/e36610ac69b5262e914a52635324050bee8f1ad2",
+    "source": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
+    "entryPoint": "IndexTTS2.5-GGUF/index-tts2_5-q8_0.gguf"
+  },
+  {
+    "languageNames": {},
+    "task": "Separation",
+    "files": [
+      {
+        "url": "https://huggingface.co/audio-cpp/audio.cpp-gguf/resolve/e36610ac69b5262e914a52635324050bee8f1ad2/BS-RoFormer-ep368-GGUF/bs-roformer-ep368-q8_0.gguf",
+        "path": "BS-RoFormer-ep368-GGUF/bs-roformer-ep368-q8_0.gguf",
+        "size": 172532256,
+        "sha256": "9a55a8cad369d00f6e0fb208bb0cd87e30e25430772b8491e20a4eace6423ad2"
+      }
+    ],
+    "displayName": "BS-RoFormer ep368 Q8_0 GGUF",
+    "id": "bs_roformer_q8_0",
+    "provider": "audio.cpp",
+    "family": "bs_roformer",
+    "license": "See source model license",
+    "languages": [
+      "language_agnostic"
+    ],
+    "fieldMappings": {},
+    "capabilities": {},
+    "version": "0.9.0/e36610ac69b5262e914a52635324050bee8f1ad2",
+    "source": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
+    "entryPoint": "BS-RoFormer-ep368-GGUF/bs-roformer-ep368-q8_0.gguf"
+  }
+]

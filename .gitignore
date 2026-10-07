@@ -1,0 +1,23 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+TestResults/
+artifacts/
+*.user
+*.dubproj/
+
+# Local data and secrets
+/projects/
+/data/
+/models/
+*.gguf
+*.partial
+*.log
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+.DS_Store

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>OpenDub</AssemblyName>
+    <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Dubbing.Application/Dubbing.Application.csproj" />
+    <ProjectReference Include="../Dubbing.Infrastructure/Dubbing.Infrastructure.csproj" />
+    <ProjectReference Include="../Dubbing.Engines.Mock/Dubbing.Engines.Mock.csproj" />
+    <ProjectReference Include="../Dubbing.Media.FFmpeg/Dubbing.Media.FFmpeg.csproj" />
+    <ProjectReference Include="../Dubbing.Engines.AudioCpp/Dubbing.Engines.AudioCpp.csproj" />
+    <ProjectReference Include="../Dubbing.Engines.LlamaCpp/Dubbing.Engines.LlamaCpp.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="LibVLCSharp.Avalonia" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Languages/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <AvaloniaResource Include="Assets/Icons/*.svg" />
+    <Content Include="Assets/Icons/*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../runtime-specs/**/*.json" Link="runtime-specs/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../engine-catalog/**/*.json" Link="engine-catalog/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

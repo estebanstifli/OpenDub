@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:vm="using:Dubbing.App.ViewModels" xmlns:loc="using:Dubbing.App.Localization" xmlns:controls="using:Dubbing.App.Controls"
+ xmlns:prj="using:Dubbing.Core.Projects" xmlns:eng="using:Dubbing.Core.Engines"
+ x:Class="Dubbing.App.SegmentDetailWindow" x:DataType="vm:SegmentDetailViewModel"
+ Title="{Binding Title}" Width="880" Height="820" MinWidth="660" MinHeight="500" Background="#0F1A2B" WindowStartupLocation="CenterOwner">
+ <Window.Resources><loc:LocalizedValueConverter x:Key="LocalizeValue"/></Window.Resources>
+ <Window.Styles>
+ <Style Selector="ComboBox"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
+ <Style Selector="Button"><Setter Property="Background" Value="#17263A"/><Setter Property="CornerRadius" Value="6"/></Style>
+ <Style Selector="Button.primary"><Setter Property="Background" Value="#2876F4"/></Style>
+ </Window.Styles>
+ <Grid RowDefinitions="*,Auto" Margin="20" RowSpacing="12">
+ <ScrollViewer><StackPanel Spacing="10">
+ <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold"/>
+ <TextBlock Text="{loc:Loc 'Drag the white edges to adjust segment timing. Changes apply only when saved.'}" TextWrapping="Wrap"/>
+ <controls:ReferenceWaveform x:Name="SegmentWave" Height="130" ClipToBounds="True"/>
+ <Button Click="PreviewClick"><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="play"/><TextBlock Text="{loc:Loc 'Play selection'}"/></StackPanel></Button>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                  <StackPanel>
+                    <TextBlock Text="{loc:Loc 'Start (seconds)'}" />
+                    <NumericUpDown Value="{Binding Editor.StartSeconds}" FormatString="F2" Minimum="0" Maximum="100000000" Increment="0.01" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{loc:Loc 'End (seconds)'}" />
+                    <NumericUpDown Value="{Binding Editor.EndSeconds}" FormatString="F2" Minimum="0" Maximum="100000000" Increment="0.01" />
+                  </StackPanel>
+                </Grid>
+                <TextBlock Text="{loc:Loc 'Original'}" />
+                <TextBox Text="{Binding Editor.SourceText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" />
+                <TextBlock Text="{loc:Loc 'Translation'}" />
+                <TextBox Text="{Binding Editor.TranslationText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" />
+                <TextBlock Text="{loc:Loc 'Speaker'}" />
+                <ComboBox ItemsSource="{Binding Speakers}" SelectedItem="{Binding Editor.Speaker}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="prj:SpeakerProfile">
+                      <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{loc:Loc 'Voice engine'}" />
+                <ComboBox ItemsSource="{Binding VoiceEngines}" SelectedItem="{Binding Editor.VoiceEngine}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="eng:EngineDescriptor">
+                      <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel Spacing="6" IsVisible="{Binding Editor.SupportsEmotion}">
+                  <TextBlock Text="{loc:Loc 'Emotion'}" />
+                  <ComboBox ItemsSource="{Binding Editor.EmotionModes}" SelectedItem="{Binding Editor.EmotionMode}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <ContentControl Content="{ReflectionBinding Converter={StaticResource LocalizeValue}}">
+                          <ContentControl.ContentTemplate>
+                            <DataTemplate x:DataType="loc:LocalizedValue">
+                              <TextBlock Text="{Binding Value}" />
+                            </DataTemplate>
+                          </ContentControl.ContentTemplate>
+                        </ContentControl>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="{loc:Loc 'Emotion label or instruction'}" />
+                  <TextBox Text="{Binding Editor.EmotionText}" />
+                  <TextBlock Text="{loc:Loc 'Emotion reference path'}" />
+                  <TextBox Text="{Binding Editor.EmotionReference}" />
+                  <TextBlock Text="{loc:Loc 'Emotion vector (8 values)'}" />
+                  <TextBox Text="{Binding Editor.EmotionVector}" />
+                  <TextBlock Text="{loc:Loc 'Intensity'}" />
+                  <Slider Minimum="0" Maximum="1" Value="{Binding Editor.Intensity}" />
+                </StackPanel>
+                <StackPanel IsVisible="{Binding Editor.SupportsSpeed}">
+                  <TextBlock Text="{loc:Loc 'Speed'}" />
+                  <NumericUpDown Value="{Binding Editor.Speed}" Minimum="0.5" Maximum="2" Increment="0.01" />
+                </StackPanel>
+                <StackPanel IsVisible="{Binding Editor.SupportsSeed}">
+                  <TextBlock Text="{loc:Loc 'Seed'}" />
+                  <TextBox Text="{Binding Editor.Seed}" />
+                </StackPanel>
+                <Expander Header="{loc:Loc 'Advanced options (JSON)'}">
+                  <TextBox Text="{Binding Editor.AdvancedOptions}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" />
+                </Expander>
+                <CheckBox Content="{loc:Loc 'Exclude from dubbing (music / non-speech)'}" IsChecked="{Binding Editor.ExcludedFromDubbing}" />
+                <TextBlock Text="{Binding Editor.DurationSummary}" Foreground="#64D8CB" />
+
+ </StackPanel></ScrollViewer>
+ <StackPanel Grid.Row="1" Spacing="8"><TextBlock x:Name="Validation" TextWrapping="Wrap"/>
+ <StackPanel Orientation="Horizontal" Spacing="10">
+ <Button Click="ApplyClick" Classes="primary"><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="save"/><TextBlock Text="{loc:Loc 'Apply segment'}"/></StackPanel></Button>
+ <Button Click="CancelClick"><StackPanel Orientation="Horizontal" Spacing="7"><controls:LucideIcon Kind="x"/><TextBlock Text="{loc:Loc 'Cancel'}"/></StackPanel></Button>
+ </StackPanel></StackPanel></Grid></Window>

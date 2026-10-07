@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "audioCpp": {
+    "version": "0.9.0",
+    "commit": "795c45fbde0a7d29c93b22199728ff5caaec02e5"
+  },
+  "llamaCpp": {
+    "version": "0.6.0-dev",
+    "commit": "d81235049384534c167caea52b85a694f6103d14",
+    "build": "b11429"
+  },
+  "platforms": {
+    "linux-x64": [
+      {
+        "component": "audio",
+        "size": 55607598,
+        "sha256": "cf87b6baa46cf45fc8a2816b8f04f0f3f3fce32cca297231a4da56543f19fe87",
+        "name": "audio-v0.9.0-bin-ubuntu-x64-cpu-portable.tar.gz",
+        "url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.0/audio-v0.9.0-bin-ubuntu-x64-cpu-portable.tar.gz"
+      },
+      {
+        "component": "llama",
+        "size": 17693462,
+        "sha256": "f6d25dde8f51133143d1453da4fd5f73b145127177612a283bf7995957af3392",
+        "name": "llama-b11429-bin-ubuntu-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-ubuntu-x64.tar.gz"
+      },
+      {
+        "component": "ffmpeg",
+        "size": 79826272,
+        "sha256": "e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99",
+        "name": "ffmpeg-linux-x64",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-linux-x64"
+      },
+      {
+        "component": "ffprobe",
+        "size": 128374768,
+        "sha256": "33e4d1be0482dce5355a04c62ccbda3d3f9f91fe4aa40cdb3585493278d91a1d",
+        "name": "ffprobe-linux-x64",
+        "url": "https://github.com/descriptinc/ffmpeg-ffprobe-static/releases/download/b6.1.2-rc.1/ffprobe-linux-x64"
+      },
+      {
+        "component": "ffmpeg-license",
+        "size": 35147,
+        "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+        "name": "linux-x64.LICENSE",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.LICENSE"
+      },
+      {
+        "component": "ffmpeg-readme",
+        "size": 2235,
+        "sha256": "72f4b1b06d419d22ace6e7cc75f06826f90737345aa0b1736158929f4aacc537",
+        "name": "linux-x64.README",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.README"
+      }
+    ],
+    "win-x64": [
+      {
+        "component": "audio",
+        "size": 25803809,
+        "sha256": "3ee19466a1a2b5366364ca8447a4794391dd89671e655ffd01aa421ac1668bfa",
+        "name": "audio-v0.9.0-bin-windows-x64-cpu-portable.zip",
+        "url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.0/audio-v0.9.0-bin-windows-x64-cpu-portable.zip"
+      },
+      {
+        "component": "llama",
+        "size": 19398918,
+        "sha256": "1283323272b04cd07905816a597a0da810918102de958f4ff6f7bbaa70ed2efe",
+        "name": "llama-b11429-bin-win-cpu-x64.zip",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-win-cpu-x64.zip"
+      },
+      {
+        "component": "ffmpeg",
+        "size": 82797568,
+        "sha256": "04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00",
+        "name": "ffmpeg-win32-x64",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-win32-x64"
+      },
+      {
+        "component": "ffprobe",
+        "size": 126382080,
+        "sha256": "c75d3ea9d6ab334ee2e90f15232af80aeac24d8a3185cd6ba19680acb8f43732",
+        "name": "ffprobe-win32-x64",
+        "url": "https://github.com/descriptinc/ffmpeg-ffprobe-static/releases/download/b6.1.2-rc.1/ffprobe-win32-x64"
+      },
+      {
+        "component": "ffmpeg-license",
+        "size": 35147,
+        "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+        "name": "win32-x64.LICENSE",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/win32-x64.LICENSE"
+      },
+      {
+        "component": "ffmpeg-readme",
+        "size": 39494,
+        "sha256": "a636a7183c58006351acbaf35303c0ed85c6e1320fd4e80de453ba6157de6311",
+        "name": "win32-x64.README",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/win32-x64.README"
+      }
+    ],
+    "osx-arm64": [
+      {
+        "component": "audio",
+        "size": 29162796,
+        "sha256": "7cea9219d5f06475011c5d225d71d988cecef633ff7d098ee8a4c7b08583b1b4",
+        "name": "audio-v0.9.0-bin-macos-arm64-metal.tar.gz",
+        "url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.0/audio-v0.9.0-bin-macos-arm64-metal.tar.gz"
+      },
+      {
+        "component": "llama",
+        "size": 11971406,
+        "sha256": "740288ec6887be94280a5dfa25b5e23a78285cab104519e6c7e218904ee82459",
+        "name": "llama-b11429-bin-macos-arm64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-macos-arm64.tar.gz"
+      },
+      {
+        "component": "ffmpeg",
+        "size": 45568216,
+        "sha256": "a90e3db6a3fd35f6074b013f948b1aa45b31c6375489d39e572bea3f18336584",
+        "name": "ffmpeg-darwin-arm64",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-darwin-arm64"
+      },
+      {
+        "component": "ffprobe",
+        "size": 47037128,
+        "sha256": "05a26b32c32115785d48b01601e104712bbc6c2b1d363b9cf44c42232684e25e",
+        "name": "ffprobe-darwin-arm64",
+        "url": "https://github.com/descriptinc/ffmpeg-ffprobe-static/releases/download/b6.1.2-rc.1/ffprobe-darwin-arm64"
+      },
+      {
+        "component": "ffmpeg-license",
+        "size": 4376,
+        "sha256": "cb48bf09a11f5fb576cddb0431c8f5ed0a60157a9ec942adffc13907cbe083f2",
+        "name": "darwin-arm64.LICENSE",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/darwin-arm64.LICENSE"
+      },
+      {
+        "component": "ffmpeg-readme",
+        "size": 1810,
+        "sha256": "05ba4b92c96605434b1aaae3eedf5a2c280c9607bf78ffca9a5b536d9af2dc6a",
+        "name": "darwin-arm64.README",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/darwin-arm64.README"
+      }
+    ]
+  },
+  "accelerators": {
+    "win-x64-cuda": [
+      {
+        "component": "audio-cuda",
+        "size": 272814336,
+        "sha256": "46eb928af284babb3526fc5198da12a4fe4e4445812d60e90a04e82cb5a87786",
+        "name": "audio-v0.9.0-bin-windows-x64-cuda13.3.zip",
+        "url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.0/audio-v0.9.0-bin-windows-x64-cuda13.3.zip"
+      },
+      {
+        "component": "audio-cuda",
+        "size": 575457454,
+        "sha256": "2c7b1054df88a3cb357c005d5284a5d9d6faf14a13885f6cf0e74d966d74c013",
+        "name": "audio-v0.9.0-cudart-windows-x64-cuda13.3.zip",
+        "url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.0/audio-v0.9.0-cudart-windows-x64-cuda13.3.zip"
+      }
+    ],
+    "win-x64-llama-cuda": [
+      {
+        "component": "llama-cuda",
+        "sha256": "8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6",
+        "size": 391443627,
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/cudart-llama-bin-win-cuda-12.4-x64.zip",
+        "name": "cudart-llama-bin-win-cuda-12.4-x64.zip"
+      },
+      {
+        "component": "llama-cuda",
+        "sha256": "dd6df685c1024e6aa55ca55ad35038692d5e284d4dc895e7a646c3245d3d14ff",
+        "size": 264478423,
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-win-cuda-12.4-x64.zip",
+        "name": "llama-b11429-bin-win-cuda-12.4-x64.zip"
+      }
+    ]
+  }
+}

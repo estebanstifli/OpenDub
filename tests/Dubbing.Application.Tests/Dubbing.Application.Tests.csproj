@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Dubbing.Application/Dubbing.Application.csproj" />
+    <ProjectReference Include="../../src/Dubbing.Infrastructure/Dubbing.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Dubbing.Engines.Mock/Dubbing.Engines.Mock.csproj" />
+  </ItemGroup>
+</Project>
