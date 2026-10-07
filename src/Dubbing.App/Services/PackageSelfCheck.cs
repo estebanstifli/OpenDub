@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Runtime.InteropServices;
 using Dubbing.Infrastructure.Processes;
 using Dubbing.Infrastructure.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -7,13 +8,22 @@ namespace Dubbing.App.Services;
 
 public static class PackageSelfCheck
 {
+    [DllImport("libSystem.B.dylib", EntryPoint = "setenv", SetLastError = true)]
+    private static extern int SetNativeEnvironment(string name, string value, int overwrite);
+
     public static string? VlcDirectory()
     {
         if (!OperatingSystem.IsMacOS()) return null;
         string bundled = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Frameworks", "VLC.app", "Contents", "MacOS", "lib"));
         string library = Directory.Exists(bundled) ? bundled : "/Applications/VLC.app/Contents/MacOS/lib";
         string plugins = Path.GetFullPath(Path.Combine(library, "..", "plugins"));
-        if (Directory.Exists(plugins)) Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", plugins);
+        if (Directory.Exists(plugins))
+        {
+            Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", plugins);
+            // libvlc reads libc's environment; .NET's Unix environment is a separate managed copy.
+            if (SetNativeEnvironment("VLC_PLUGIN_PATH", plugins, 1) != 0)
+                throw new InvalidOperationException("Could not configure the bundled VLC plugins.");
+        }
         return library;
     }
     public static async Task<int> RunAsync()
