@@ -14,6 +14,16 @@ public interface IProcessRunner
 
 public sealed class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
 {
+    internal static void ConfigureNativeLibraries(ProcessStartInfo start)
+    {
+        if (!OperatingSystem.IsLinux() || !Path.IsPathFullyQualified(start.FileName)) return;
+        // Each inference engine ships its own ggml ABI. Prefer its adjacent libraries
+        // over AppImage's shared VLC dependencies inherited from the parent process.
+        string directory = Path.GetDirectoryName(start.FileName)!;
+        start.Environment.TryGetValue("LD_LIBRARY_PATH", out string? inherited);
+        start.Environment["LD_LIBRARY_PATH"] = directory + (string.IsNullOrEmpty(inherited) ? "" : ":" + inherited);
+    }
+
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -31,6 +41,7 @@ public sealed class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunne
         bool versionProbe = request.Arguments.Count == 1 && request.Arguments[0] == "--version";
         if (versionProbe) logger.LogDebug("Checking runtime version: {Executable}", Path.GetFileName(request.Executable));
         else logger.LogDebug("Starting {Executable}", Path.GetFileName(request.Executable));
+        ConfigureNativeLibraries(start);
         process.Start();
         process.StandardInput.Close();
         var output = DrainAsync(process.StandardOutput, request.OnOutputLine);

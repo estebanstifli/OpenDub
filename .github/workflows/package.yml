@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.platform == 'linux' && '[{"os":"ubuntu-22.04","rid":"linux-x64"}]' || inputs.platform == 'macos' && '[{"os":"macos-14","rid":"osx-arm64"}]' || inputs.platform == 'windows' && '[{"os":"windows-latest","rid":"win-x64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-22.04","rid":"linux-x64"},{"os":"macos-14","rid":"osx-arm64"}]') }}
+        include: ${{ fromJSON(inputs.platform == 'linux' && '[{"os":"ubuntu-24.04","rid":"linux-x64"}]' || inputs.platform == 'macos' && '[{"os":"macos-14","rid":"osx-arm64"}]' || inputs.platform == 'windows' && '[{"os":"windows-latest","rid":"win-x64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-24.04","rid":"linux-x64"},{"os":"macos-14","rid":"osx-arm64"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +24,7 @@ jobs:
           global-json-file: global.json
       - name: Linux desktop and VLC build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libvlc-dev vlc-plugin-base vlc-plugin-video-output libfuse2 patchelf libfontconfig1 libice6 libsm6 libx11-6
+        run: sudo apt-get update && sudo apt-get install -y libvlc-dev vlc-plugin-base vlc-plugin-video-output libfuse2t64 patchelf libfontconfig1 libice6 libsm6 libx11-6
       - run: dotnet restore DubbingApp.sln --locked-mode
       - run: dotnet test DubbingApp.sln -c Release --no-restore
       - name: Build self-contained package with pinned native tools

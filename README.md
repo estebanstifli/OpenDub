@@ -7,7 +7,7 @@ Local AI video dubbing for Windows, Linux and macOS Apple Silicon. English UI wi
 Download the package for your system from [Releases](https://github.com/estebanstifli/OpenDub/releases). The repository and releases are private during the 0.1.0 preview.
 
 - **Windows x64:** extract the ZIP into a writable folder and open `OpenDub.exe`. CPU and NVIDIA CUDA engines are included. CUDA requires a compatible NVIDIA driver.
-- **Linux x64:** make the AppImage executable and launch it. Builds target Ubuntu 22.04 or newer compatible desktop environments. The AppImage includes VLC; the development tarball can require system VLC and desktop libraries.
+- **Linux x64:** make the AppImage executable and launch it. Builds target Ubuntu 24.04 or newer compatible desktop environments. The AppImage includes VLC; the development tarball can require system VLC and desktop libraries.
 - **macOS Apple Silicon:** open the DMG and drag `OpenDub.app` into Applications. VLC is included. Preview builds are unsigned unless built with a Developer ID identity; Gatekeeper can block them. Public signing and notarization remain a release prerequisite.
 
 The **Prepare OpenDub** assistant downloads the six pinned models sequentially (about 8 GiB), verifies SHA-256 and checks native executables. Cancelled downloads retain partial files and resume on retry. Choose an existing model folder to reuse verified files. Downloads require internet; dubbing runs locally. Verification does not guarantee enough GPU memory for every workload.

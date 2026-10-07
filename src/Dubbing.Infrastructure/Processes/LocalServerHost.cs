@@ -29,6 +29,7 @@ public sealed class LocalServerHost : IDisposable
         process.OutputDataReceived += (_, e) => LogRuntimeLine(e.Data);
         process.ErrorDataReceived += (_, e) => { if (!string.IsNullOrEmpty(e.Data)) { lastError = e.Data[..Math.Min(e.Data.Length, 2000)]; LogRuntimeLine(e.Data); } };
         ActivityJournal.Write($"Starting local runtime {Path.GetFileName(executable)} on port {port}.");
+        ProcessRunner.ConfigureNativeLibraries(start);
         process.Start(); process.StandardInput.Close(); process.BeginOutputReadLine(); process.BeginErrorReadLine();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         var deadline = DateTime.UtcNow + TimeSpan.FromMinutes(5);
