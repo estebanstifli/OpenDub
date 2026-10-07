@@ -325,5 +325,7 @@
   "Generating the merged dialogue…": "Generating the merged dialogue…",
   "Realtime audio playback failed. Check the active WAV files.": "Realtime audio playback failed. Check the active WAV files.",
   "Review overlaps": "Review overlaps",
+  "Segment {0} overlaps segment {1} by {2:F1} ms.": "Segment {0} overlaps segment {1} by {2:F1} ms.",
+  "Generated audio ends at {0:F3} s; the segment ends at {1:F3} s.": "Generated audio ends at {0:F3} s; the segment ends at {1:F3} s.",
   "Speech operation complete. Final audio is ready for overlap review.": "Speech operation complete. Final audio is ready for overlap review."
 }

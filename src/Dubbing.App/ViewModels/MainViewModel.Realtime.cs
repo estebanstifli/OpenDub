@@ -12,10 +12,27 @@ public partial class MainViewModel
     private RealtimeAudioService? realtimeAudio;
     private bool resolvingCollisions;
     private int realtimeMixVersion;
+    private readonly HashSet<string> pendingTimingReviews = [];
+    private string? timingReviewProject;
+    private void ResetTimingReviewsForProject()
+    {
+        if (timingReviewProject == session.Project.Id) return;
+        pendingTimingReviews.Clear(); timingReviewProject = session.Project.Id;
+    }
+    private Task<bool> ReviewEditedTimingAsync(CancellationToken ct)
+    {
+        ResetTimingReviewsForProject();
+        return pendingTimingReviews.Count == 0 ? Task.FromResult(true) : ResolveAffectedCollisionsAsync(ct, [.. pendingTimingReviews]);
+    }
     private Task<bool> ResolveCollisionsAsync(CancellationToken ct) => ResolveAffectedCollisionsAsync(ct, null);
     private async Task<bool> ResolveAffectedCollisionsAsync(CancellationToken ct, HashSet<string>? affectedIds)
     {
         if (resolvingCollisions) return false;
+        ResetTimingReviewsForProject();
+        // A cancelled review is retried on playback/export or the next timing change,
+        // not on every subsequent text edit or unrelated autosave.
+        if (affectedIds is null) pendingTimingReviews.Clear();
+        else pendingTimingReviews.ExceptWith(affectedIds);
         resolvingCollisions = true;
         CollisionChoice? repeat = null;
         var merged = new HashSet<string>();

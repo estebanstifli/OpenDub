@@ -32,6 +32,52 @@ public static class TestAppBuilder
 public sealed class ShellTests
 {
     [AvaloniaFact]
+    public async Task AutoSaveReviewsOnlyTimingEditsAndDoesNotRepeatCancelledReviewsOnTextChanges()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "timing-review-" + Guid.NewGuid());
+        var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
+        var registry = new EngineRegistry(MockEngineCatalog.Create()); var factory = new ProjectFactory(registry);
+        var session = new ProjectSession(store); var dialogs = new FakeDialogs(root);
+        var media = new FFmpegMediaEngine(new ProcessRunner(NullLogger<ProcessRunner>.Instance), new RuntimeLocator(), new());
+        var vm = new MainViewModel(session, factory, registry, dialogs, new TimelineBuilder(), new TranslationService(registry), NullLogger<MainViewModel>.Instance,
+            new ImportVideoService(media, store, registry, new TimelineBuilder()), new GenerateSpeechService(new EngineSelectionService(registry), store),
+            new ExportVideoService(media, new DubRenderService(media), store));
+        var first = new DubSegment { Start = TimeSpan.FromSeconds(15), End = TimeSpan.FromSeconds(17.4), Translation = new("es", "Texto"),
+            GeneratedSpeech = new("raw.wav", TimeSpan.FromSeconds(3), "raw", "raw"), FittedSpeech = new("fit.wav", TimeSpan.FromSeconds(2.4), "fit", "fit"), DirtyStages = [] };
+        var next = new DubSegment { Start = first.End, End = TimeSpan.FromSeconds(20), Translation = new("es", "Luego") };
+        async Task WaitForSave()
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            do { await Task.Delay(25, timeout.Token); } while (vm.IsDirty || vm.IsBusy);
+        }
+        try
+        {
+            await store.SaveAsync(factory.Create() with { Segments = [new() { End = TimeSpan.FromSeconds(4) },
+                new() { Start = TimeSpan.FromSeconds(3), End = TimeSpan.FromSeconds(5) }, first, next] }, root, default);
+            await vm.OpenCommand.ExecuteAsync(null); vm.SelectedSegment = vm.Segments[2];
+            vm.Editor.TranslationText = "Texto editado"; await WaitForSave();
+            Assert.Equal(0, dialogs.CollisionReviews);
+            Assert.Equal(first.FittedSpeech, ProjectAudioMix.EffectiveSpeech(session.Project.Segments[2]));
+            vm.Segments[2].SourceText = "Changed original"; await WaitForSave();
+            Assert.Equal(0, dialogs.CollisionReviews);
+            // Change a bound while still touching the next segment exactly.
+            vm.Editor.StartSeconds = 15.1; vm.Editor.EndSeconds = 17.5;
+            vm.SelectedSegment = vm.Segments[3]; vm.Editor.StartSeconds = 17.5;
+            await WaitForSave(); Assert.Equal(0, dialogs.CollisionReviews);
+            // Moving the later start backwards must find only its changed neighbour,
+            // even though an unrelated pair earlier in the film already overlaps.
+            vm.Editor.StartSeconds = 17.4; await WaitForSave();
+            Assert.Equal(1, dialogs.CollisionReviews);
+            Assert.Equal(first.Id, dialogs.LastCollision!.First.Id); Assert.Equal(next.Id, dialogs.LastCollision.Second.Id);
+            vm.Editor.TranslationText = "Later text edit"; await WaitForSave();
+            Assert.Equal(1, dialogs.CollisionReviews);
+            vm.BackgroundGain = .8; await WaitForSave(); Assert.Equal(1, dialogs.CollisionReviews);
+            vm.Editor.StartSeconds = 17.3; await vm.SaveCommand.ExecuteAsync(null);
+            Assert.Equal(2, dialogs.CollisionReviews);
+        }
+        finally { vm.StopAutoSave(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+    [AvaloniaFact]
     public async Task RegenerateAndFitWaitsForFinalAudioAndIgnoresUnrelatedOverlaps()
     {
         string root = Path.Combine(Path.GetTempPath(), "fit-dialog-" + Guid.NewGuid());
@@ -699,7 +745,8 @@ public sealed class ShellTests
     {
         public CollisionChoice Collision { get; set; } = CollisionChoice.Cancel;
         public int CollisionReviews { get; private set; }
-        public Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision collision) { CollisionReviews++; return Task.FromResult(new CollisionDecision(Collision)); }
+        public SegmentCollision? LastCollision { get; private set; }
+        public Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision collision) { CollisionReviews++; LastCollision = collision; return Task.FromResult(new CollisionDecision(Collision)); }
         public UnsavedChoice Choice { get; set; } = UnsavedChoice.Discard;
         public int Confirmations { get; private set; }
         public Task<UnsavedChoice> ConfirmUnsavedAsync() { Confirmations++; return Task.FromResult(Choice); }

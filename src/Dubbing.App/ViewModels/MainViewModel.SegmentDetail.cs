@@ -41,7 +41,7 @@ public partial class MainViewModel
             {
                 Editor.CopyFrom(editor);
                 ApplySegmentCore();
-                await ResolveCollisionsAsync(ct);
+                await ReviewEditedTimingAsync(ct);
                 await session.SaveAsync(null, ct);
             }
         }

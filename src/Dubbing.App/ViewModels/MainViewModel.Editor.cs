@@ -163,6 +163,11 @@ public partial class MainViewModel
                 SourceReferenceStart = previous.SourceReferenceStart ?? previous.Start, SourceReferenceEnd = previous.SourceReferenceEnd ?? previous.End,
                 DirtyStages = previous.DirtyStages.Union(lengthChanged ? new[] { PipelineStage.DurationFit, PipelineStage.Mix, PipelineStage.Mux } : new[] { PipelineStage.Mix, PipelineStage.Mux }).ToArray() };
         }
+        if (updated.Start != previous.Start || updated.End != previous.End ||
+            updated.ClipAudioToSlot != previous.ClipAudioToSlot || previous.ExcludedFromDubbing && !updated.ExcludedFromDubbing)
+        {
+            ResetTimingReviewsForProject(); pendingTimingReviews.Add(updated.Id);
+        }
         Edit(p => p with { Segments = p.Segments.Select(s => s.Id == updated.Id ? updated : s).ToArray() });
         pendingSegmentEdits = false;
         loadedEditor = new(); loadedEditor.CopyFrom(Editor);
@@ -323,8 +328,8 @@ public partial class MainViewModel
             if (session.DirectoryPath is null || !session.IsDirty) return;
             await session.SaveAsync(null, ct); IsDirty = session.IsDirty;
             if (IsBusy) return;
-            if (SegmentCollisions.Find(session.Project) is not null)
-                await RunAsync(async token => { await ResolveCollisionsAsync(token); }, "Review overlaps");
+            if (pendingTimingReviews.Count > 0)
+                await RunAsync(async token => { await ReviewEditedTimingAsync(token); }, "Review overlaps");
             if (IsPlaybackRunning) await UpdateRealtimeMixAsync();
         }
         catch (OperationCanceledException) { }

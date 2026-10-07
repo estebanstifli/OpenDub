@@ -231,5 +231,7 @@
   "Generating the merged dialogue…": "Generando el diálogo unido…",
   "Realtime audio playback failed. Check the active WAV files.": "Falló la reproducción de audio en tiempo real. Revisa los WAV activos.",
   "Review overlaps": "Revisar solapamientos",
+  "Segment {0} overlaps segment {1} by {2:F1} ms.": "El segmento {0} se solapa con el segmento {1} en {2:F1} ms.",
+  "Generated audio ends at {0:F3} s; the segment ends at {1:F3} s.": "El audio generado termina en {0:F3} s; el segmento termina en {1:F3} s.",
   "Speech operation complete. Final audio is ready for overlap review.": "Generación y ajuste terminados. El audio final está listo para revisar solapamientos."
 }

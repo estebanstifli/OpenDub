@@ -13,8 +13,10 @@ public sealed partial class ProjectDialogs
             Background = Brush.Parse("#0F1A2B"), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         TextBlock Label(string value) => new() { Text = value, TextWrapping = TextWrapping.Wrap };
         var panel = new StackPanel { Spacing = 14, Margin = new(22) };
-        panel.Children.Add(Label(text.Format("Segment {0} reaches segment {1}.", c.FirstNumber, c.SecondNumber)));
-        panel.Children.Add(Label($"{c.First.Start.TotalSeconds:F2}–{c.AudibleEnd.TotalSeconds:F2} s → {c.Second.Start.TotalSeconds:F2}–{c.Second.End.TotalSeconds:F2} s"));
+        panel.Children.Add(Label(text.Format("Segment {0} overlaps segment {1} by {2:F1} ms.", c.FirstNumber, c.SecondNumber, (c.AudibleEnd - c.Second.Start).TotalMilliseconds)));
+        panel.Children.Add(Label($"{c.First.Start.TotalSeconds:F3}–{c.AudibleEnd.TotalSeconds:F3} s → {c.Second.Start.TotalSeconds:F3}–{c.Second.End.TotalSeconds:F3} s"));
+        if (c.AudibleEnd > c.First.End)
+            panel.Children.Add(Label(text.Format("Generated audio ends at {0:F3} s; the segment ends at {1:F3} s.", c.AudibleEnd.TotalSeconds, c.First.End.TotalSeconds)));
         panel.Children.Add(Label(c.First.Translation.Text)); panel.Children.Add(Label(c.Second.Translation.Text));
         panel.Children.Add(Label(text["Do not overlap trims excess audio at the boundary; this may cut speech. Merge joins both texts and regenerates speech using the first speaker. Keep overlap plays both voices together."]));
         var all = new CheckBox { Content = text["Apply to remaining overlaps (limit or keep only)"] }; panel.Children.Add(all);

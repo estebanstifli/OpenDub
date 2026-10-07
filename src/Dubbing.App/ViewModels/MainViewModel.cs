@@ -95,7 +95,7 @@ public partial class MainViewModel : ObservableObject
         if (!await ResolveUnsavedAsync(ct)) return;
         var directory = await dialogs.OpenProjectAsync();
         if (directory is null) return;
-        StopPlayback(); await session.OpenAsync(directory, ct);
+        StopPlayback(); await session.OpenAsync(directory, ct); pendingTimingReviews.Clear();
         if (session.Project.Source is { } missing && !File.Exists(missing.Path))
         {
             Status = L["Source video moved. Choose its new location."];
@@ -110,7 +110,7 @@ public partial class MainViewModel : ObservableObject
         if (IsOllamaSelected) await LoadOllamaModelsAsync(ct);
     });
 
-    [RelayCommand] private async Task SaveAsync() => await RunAsync(async ct => { await SaveCoreAsync(ct); });
+    [RelayCommand] private async Task SaveAsync() => await RunAsync(async ct => { if (await SaveCoreAsync(ct)) await ReviewEditedTimingAsync(ct); });
 
     private async Task<bool> SaveCoreAsync(CancellationToken ct)
     {
@@ -292,6 +292,7 @@ public partial class MainViewModel : ObservableObject
 
     private void Refresh()
     {
+        ResetTimingReviewsForProject();
         DubPreviewPath = null;
         GenerateCommand.NotifyCanExecuteChanged(); TranslateCommand.NotifyCanExecuteChanged();
         string? selectedId = SelectedSegment?.Id;

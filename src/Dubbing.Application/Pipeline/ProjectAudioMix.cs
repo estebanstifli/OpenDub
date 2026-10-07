@@ -10,7 +10,10 @@ public enum AudioAudition { Mix, OriginalVoice, Dub, Background }
 public static class ProjectAudioMix
 {
     public static GeneratedSpeech? EffectiveSpeech(DubSegment segment) =>
-        segment.DirtyStages.Contains(PipelineStage.DurationFit) ? segment.GeneratedSpeech : segment.FittedSpeech ?? segment.GeneratedSpeech;
+        // Text/voice edits invalidate future synthesis, but keep the last finished audio
+        // audible until regeneration commits its replacement (including the fitted WAV).
+        segment.DirtyStages.Contains(PipelineStage.DurationFit) && !segment.DirtyStages.Contains(PipelineStage.Tts)
+            ? segment.GeneratedSpeech : segment.FittedSpeech ?? segment.GeneratedSpeech;
     public static TimeSpan EffectiveDuration(DubSegment segment) => EffectiveSpeech(segment) is { } speech
         ? segment.ClipAudioToSlot && speech.Duration > segment.TargetDuration ? segment.TargetDuration : speech.Duration : TimeSpan.Zero;
     public static bool IsBackground(string key) => key is "instrumental" or "background" or "music" or "effects" || key.StartsWith("background-", StringComparison.Ordinal);

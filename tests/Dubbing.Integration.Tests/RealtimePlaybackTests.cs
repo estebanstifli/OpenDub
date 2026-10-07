@@ -10,6 +10,53 @@ namespace Dubbing.Integration.Tests;
 
 public sealed class RealtimePlaybackTests : IDisposable
 {
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, true)]
+    public void SharedBoundaryIsValidAndOnlyExcessBeyondRoundingToleranceOverlaps(int excessMs, bool overlaps)
+    {
+        var a = new DubSegment { Start = TimeSpan.FromSeconds(15), End = TimeSpan.FromMilliseconds(17400 + excessMs) };
+        var b = new DubSegment { Start = TimeSpan.FromMilliseconds(17400), End = TimeSpan.FromSeconds(20) };
+        var project = new DubbingProject { Segments = [a, b] };
+        Assert.Equal(overlaps, SegmentCollisions.Find(project) is not null);
+        Assert.Equal(overlaps, SegmentCollisions.Find(project, new HashSet<string> { b.Id }) is not null);
+        // The same boundary rule applies to measured audio, not only the segment box.
+        a = a with { End = b.Start, GeneratedSpeech = new("a.wav", TimeSpan.FromMilliseconds(2400 + excessMs), "a", "a"), DirtyStages = [] };
+        Assert.Equal(overlaps, SegmentCollisions.Find(project with { Segments = [a, b] }) is not null);
+    }
+    [Fact]
+    public void ScopedReviewFindsEarlierLongClipsAndLaterNeighboursButIgnoresUnrelatedPairs()
+    {
+        DubSegment Segment(double start, double end) => new() { Start = TimeSpan.FromSeconds(start), End = TimeSpan.FromSeconds(end) };
+        var longClip = Segment(0, 10); var middle = Segment(2, 3); var edited = Segment(8, 12); var next = Segment(11, 13);
+        var project = new DubbingProject { Segments = [longClip, middle, edited, next, Segment(20, 24), Segment(22, 26)] };
+        var selection = new HashSet<string> { edited.Id };
+        var collision = SegmentCollisions.Find(project, selection)!;
+        Assert.Equal(longClip.Id, collision.First.Id); Assert.Equal(edited.Id, collision.Second.Id);
+        project = SegmentCollisions.Resolve(project, collision, CollisionChoice.Allow);
+        collision = SegmentCollisions.Find(project, selection)!;
+        Assert.Equal(edited.Id, collision.First.Id); Assert.Equal(next.Id, collision.Second.Id);
+        project = SegmentCollisions.Resolve(project, collision, CollisionChoice.Allow);
+        Assert.Null(SegmentCollisions.Find(project, selection));
+        Assert.NotNull(SegmentCollisions.Find(project));
+        Assert.Null(SegmentCollisions.Find(project, new HashSet<string>()));
+    }
+    [Fact]
+    public void TextEditsKeepFinishedFittedAudioUntilRegeneration()
+    {
+        var a = new DubSegment { End = TimeSpan.FromSeconds(2),
+            GeneratedSpeech = new("raw.wav", TimeSpan.FromSeconds(3), "raw", "raw"),
+            FittedSpeech = new("fit.wav", TimeSpan.FromSeconds(2), "fit", "fit"), DirtyStages = [] };
+        var project = new DubbingProject { Segments = [a, new() { Start = a.End, End = TimeSpan.FromSeconds(4) }] };
+        project = ProjectEditor.EditTranslation(project, a.Id, "New translation");
+        Assert.Equal(a.FittedSpeech, Dubbing.Application.Pipeline.ProjectAudioMix.EffectiveSpeech(project.Segments[0]));
+        Assert.Null(SegmentCollisions.Find(project));
+        // Once a new raw synthesis has completed it replaces the old fitted audio.
+        var regenerated = a with { FittedSpeech = null, DirtyStages = [Dubbing.Core.Pipeline.PipelineStage.DurationFit] };
+        Assert.NotNull(SegmentCollisions.Find(project with { Segments = [regenerated, project.Segments[1]] }));
+    }
     private readonly string root = Path.Combine(Path.GetTempPath(), "realtime-" + Guid.NewGuid());
     private async Task<string> Wave(string name, int frequency)
     {
