@@ -11,6 +11,8 @@ public enum UnsavedChoice { Save, Discard, Cancel }
 public sealed record AudioTrackChoice(IReadOnlyList<SourceAudioTrack> Tracks, int AnalysisIndex, bool Separate);
 public interface IProjectDialogs
 {
+    Task<Dubbing.Application.Projects.CollisionDecision> EditOverlapAsync(Dubbing.App.ViewModels.OverlapEditorModel model, CancellationToken ct)
+        => ResolveCollisionAsync(model.Collision);
     Task<Dubbing.Application.Projects.CollisionDecision> ResolveCollisionAsync(Dubbing.Application.Projects.SegmentCollision collision)
         => Task.FromResult(new Dubbing.Application.Projects.CollisionDecision(Dubbing.Application.Projects.CollisionChoice.Cancel));
     Task<(double Start, double End)?> EditVoiceReferenceAsync(IReadOnlyList<float> peaks, double windowStart, double windowEnd,

@@ -28,6 +28,7 @@ public sealed class TranslationService(IEngineRegistry registry)
                 {
                     PreviousSegments = project.Segments.Skip(Math.Max(0, index - 2)).Take(Math.Min(index, 2)).Select(x => x.Source.Text).ToArray(),
                     ModelId = project.Settings.TranslationModelId,
+                    Prompt = project.Settings.TranslationPrompt,
                     NextSegments = project.Segments.Skip(index + 1).Take(2).Select(x => x.Source.Text).ToArray(),
                     Glossary = project.Settings.Glossary, SpeakerId = segment.SpeakerId, TargetDuration = segment.TargetDuration
                 }, cancellationToken);

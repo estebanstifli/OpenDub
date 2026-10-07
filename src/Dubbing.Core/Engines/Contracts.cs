@@ -42,6 +42,7 @@ public interface ISeparationEngine : IEngine
 
 public sealed record TranslationRequest(string SegmentId, string Text, string SourceLanguage, string TargetLanguage)
 {
+    public string? Prompt { get; init; }
     public string? ModelId { get; init; }
     public IReadOnlyList<string> PreviousSegments { get; init; } = [];
     public IReadOnlyList<string> NextSegments { get; init; } = [];

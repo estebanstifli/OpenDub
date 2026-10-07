@@ -5,7 +5,7 @@ using Dubbing.Core.Projects;
 
 namespace Dubbing.Application.Projects;
 
-public enum CollisionChoice { Cancel, Limit, Merge, Allow }
+public enum CollisionChoice { Cancel, Limit, Merge, Allow, Edited }
 public sealed record SegmentCollision(string Key, DubSegment First, DubSegment Second, int FirstNumber, int SecondNumber, TimeSpan AudibleEnd);
 public sealed record CollisionDecision(CollisionChoice Choice, bool ApplyToAll = false);
 

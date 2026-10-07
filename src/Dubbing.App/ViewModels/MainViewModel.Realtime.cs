@@ -57,8 +57,9 @@ public partial class MainViewModel
                 }
                 ct.ThrowIfCancellationRequested(); PauseRequested?.Invoke();
                 var decision = repeat is { } choice && (choice != CollisionChoice.Limit || collision.Second.Start > collision.First.Start)
-                    ? new CollisionDecision(choice, true) : await dialogs.ResolveCollisionAsync(collision);
+                    ? new CollisionDecision(choice, true) : await EditOverlapAsync(collision, affectedIds, ct);
                 if (decision.Choice == CollisionChoice.Cancel) return false;
+                if (decision.Choice == CollisionChoice.Edited) { repeat = null; continue; }
                 repeat = decision.ApplyToAll ? decision.Choice : null;
                 session.Update(SegmentCollisions.Resolve(session.Project, collision, decision.Choice));
                 Refresh();
@@ -67,6 +68,25 @@ public partial class MainViewModel
             }
         }
         finally { resolvingCollisions = false; }
+    }
+    private async Task<CollisionDecision> EditOverlapAsync(SegmentCollision collision, HashSet<string>? affectedIds, CancellationToken ct)
+    {
+        if (workspace is null || session.DirectoryPath is not { } directory) return await dialogs.ResolveCollisionAsync(collision);
+        StopRequested?.Invoke();
+        async Task<DubbingProject> Commit(DubbingProject draft, string? regenerateId, CancellationToken token)
+        {
+            session.Update(draft); await session.SaveAsync(directory, token); Refresh();
+            if (regenerateId is not null)
+            {
+                try { await speech.GenerateAsync(session.Project, directory, ReportProgress(), token, regenerateId, fitDuration: true, overwriteExisting: true); }
+                finally { await session.OpenAsync(directory, CancellationToken.None); Refresh(); }
+            }
+            return session.Project;
+        }
+        using var model = new OverlapEditorModel(session.Project, collision, directory, workspace.Media, Commit, () => session.Project);
+        var decision = await dialogs.EditOverlapAsync(model, ct);
+        affectedIds?.UnionWith(model.ChangedIds);
+        return decision;
     }
     private async Task<RealtimePlaybackPlan> PlaybackPlanAsync(CancellationToken ct, AudioAudition audition = AudioAudition.Mix)
     {

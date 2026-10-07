@@ -8,6 +8,7 @@ public sealed class PipelineDialogOptions
     public Action<Avalonia.Controls.StackPanel>? ConfigureFields { get; init; }
     public bool Translation { get; init; }
     public string TargetLanguage { get; set; } = "es";
+    public string TranslationPrompt { get; set; } = TranslationPrompts.Default;
     public IReadOnlyList<string> Languages { get; init; } = [];
     public IReadOnlyList<EngineDescriptor> Engines { get; init; } = [];
     public EngineDescriptor? Engine { get; set; }

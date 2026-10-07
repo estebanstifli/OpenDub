@@ -86,6 +86,7 @@ public sealed record ProjectSettings
     public bool NormalizeSegments { get; init; } = true;
     public bool ParagraphSegments { get; init; }
     public string? TranslationModelId { get; init; }
+    public string TranslationPrompt { get; init; } = Dubbing.Core.Engines.TranslationPrompts.Default;
     public bool UseSourceVoicePerSegment { get; init; } = true;
     public string SourceLanguage { get; init; } = "en";
     public string TargetLanguage { get; init; } = "es";

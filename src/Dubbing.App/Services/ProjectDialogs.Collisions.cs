@@ -7,6 +7,12 @@ namespace Dubbing.App.Services;
 
 public sealed partial class ProjectDialogs
 {
+    public async Task<CollisionDecision> EditOverlapAsync(Dubbing.App.ViewModels.OverlapEditorModel model, CancellationToken ct)
+    {
+        var dialog = new OverlapEditorWindow(model, text, ct, owner.DataContext);
+        try { return await ShowDialogAsync<CollisionDecision?>(dialog) ?? new(CollisionChoice.Cancel); }
+        finally { await dialog.FinishAsync(); }
+    }
     public async Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision c)
     {
         var window = new Window { Title = text["Overlapping dialogue"], Width = 700, Height = 510, MinWidth = 570, MinHeight = 440,

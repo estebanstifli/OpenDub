@@ -1,5 +1,17 @@
 # Studio workspace
 
+## Translation instructions
+
+Translate includes an editable Translation prompt and Reset prompt. The initial text is the shared dubbing instruction used by llama.cpp and Ollama. Add dialect/style preferences such as “Use Spanish from Spain.” The project remembers the prompt, including for any later duration-driven translation rewrite. Language codes, segment IDs and the structured JSON response contract are added separately. Existing translations are replaced only when Overwrite existing is enabled; changing the prompt alone does not regenerate speech.
+
+## Visual overlap editor
+
+An overlap opens a visual editor with original and dubbed waveforms on the same absolute time scale. The selected segment is gold, adjacent segments blue, and generated audio beyond its slot red. The view includes the previous/selected/next segments, a one-second margin, and any additional long overlapping partner. Original and translated text sit below their respective waveforms. Click a rectangle to select another segment; drag its gold edges (horizontal resize cursor) or enter millisecond bounds. Changes are drafts until Save changes, Regenerate and fit, a merge or Done.
+
+Play original and Play dub audition their tracks independently of the main mixer mute controls. Both share a white playhead with Pause, Stop and click-to-seek. Dub audition mixes the existing clips through the virtual timeline stream; it does not render a new full-film WAV. Only the original context is cut temporarily to calculate its waveform. Editing timing changes placement, not the WAV's speed. Regenerate and fit publishes its completed audio and refreshes the waveforms while keeping the editor open.
+
+Merge previous/next joins consecutive active segments, preserves the first speaker, combines both texts and regenerates the joined voice with duration fitting when a valid translation is available. Missing/stale translations leave a saved merged draft for correction. Save/regenerate/merge commit immediately; Close discards only unsaved edits. Closing during work cancels it and waits for cleanup before returning to the owner. Trim dub at boundary explicitly caps excess audio (which can cut words); Keep overlap records approval. Done is enabled once the selected segment has no unresolved overlap. Other affected collisions are reviewed afterward. The UI remains English by default with JSON localization.
+
 The left sidebar switches between Studio, Speakers, Engines, Models and Settings. Its top button collapses it to icons; tooltips remain available. New/Open/Import/Save are at the bottom.
 
 The video preview sits above Play, Pause and Stop. The timeline immediately below shows original audio (or separated vocals), separated background when available, and dialogue segments. The white cursor follows playback. Click or drag anywhere on the timeline to seek; Left/Right move by 0.1 seconds, Shift+Left/Right by one second. Zoom controls change timeline scale without changing time. Fit returns to the whole recording. The segment inspector remains on the right. At smaller window heights or with an expanded activity panel, the studio workspace scrolls vertically.

@@ -56,6 +56,7 @@ public sealed class DurationFitService(IMediaEngine media, IEngineRegistry regis
                     {
                         TargetDuration = segment.TargetDuration, SpeakerId = segment.SpeakerId, Glossary = project.Settings.Glossary,
                         ModelId = project.Settings.TranslationModelId,
+                        Prompt = project.Settings.TranslationPrompt,
                         StyleInstructions = $"Previous wording: {segment.Translation.Text}. Actual speech took {speech.Duration.TotalSeconds:F2} seconds. " +
                             $"Rewrite {(ratio > 1 ? "more concisely" : "slightly longer")} for {segment.TargetDuration.TotalSeconds:F2} seconds. Preserve all meaning."
                     }, ct);

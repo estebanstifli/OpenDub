@@ -170,6 +170,7 @@ public partial class MainViewModel : ObservableObject
         var options = new PipelineDialogOptions
         {
             Translation = true, TargetLanguage = session.Project.Settings.TargetLanguage, Languages = OutputLanguages,
+            TranslationPrompt = session.Project.Settings.TranslationPrompt,
             Engines = registry.GetAvailableEngines(EngineTask.Translation),
             Engine = registry.GetAvailableEngines(EngineTask.Translation).FirstOrDefault(e => e.EngineId == session.Project.Engines.Translation),
             Backend = workspace?.Settings.Current.TranslationBackend ?? "auto",
@@ -187,7 +188,8 @@ public partial class MainViewModel : ObservableObject
                 (options.Engine.ProviderId == "llama.cpp" && options.ModelPath != (workspace?.Settings.Current.TranslationModelPath ?? ""));
             Edit(p =>
             {
-                var updated = p with { Settings = p.Settings with { TargetLanguage = options.TargetLanguage, TranslationModelId = options.OllamaModel },
+                var updated = p with { Settings = p.Settings with { TargetLanguage = options.TargetLanguage, TranslationModelId = options.OllamaModel,
+                    TranslationPrompt = string.IsNullOrWhiteSpace(options.TranslationPrompt) ? TranslationPrompts.Default : options.TranslationPrompt.Trim() },
                     Engines = p.Engines with { Translation = options.Engine.EngineId } };
                 return changed ? ProjectEditor.Invalidate(updated, PipelineStage.Translation) : updated;
             });

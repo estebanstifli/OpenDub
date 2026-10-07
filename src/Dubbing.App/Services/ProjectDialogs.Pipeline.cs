@@ -42,13 +42,20 @@ public sealed partial class ProjectDialogs
         var overwrite = new CheckBox { Content = text["Overwrite existing in selection"], IsChecked = options.OverwriteExisting };
         selectionFields.Children.Add(overwrite);
         ComboBox? engine = null, model = null;
-        TextBox? modelPath = null;
+        TextBox? modelPath = null, prompt = null;
         if (options.Translation)
         {
             fields.Children.Add(new TextBlock { Text = text["Target language"] });
             var language = new ComboBox { ItemsSource = options.Languages, SelectedItem = options.TargetLanguage, HorizontalAlignment = HorizontalAlignment.Stretch };
             language.SelectionChanged += (_, _) => { if (language.SelectedItem is string code) options.TargetLanguage = code; };
             fields.Children.Add(language);
+            fields.Children.Add(new TextBlock { Text = text["Translation prompt"] });
+            prompt = new TextBox { Text = options.TranslationPrompt, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 110, Tag = "TranslationPrompt" };
+            prompt.TextChanged += (_, _) => options.TranslationPrompt = prompt.Text ?? "";
+            fields.Children.Add(prompt);
+            var resetPrompt = Button("Reset prompt", "refresh-cw");
+            resetPrompt.Click += (_, _) => prompt.Text = TranslationPrompts.Default; fields.Children.Add(resetPrompt);
+            fields.Children.Add(new TextBlock { Text = text["Saved with this project. Add dialect or style instructions, e.g. Spanish from Spain. Output language and JSON format are supplied automatically. Existing translations change only when overwrite is enabled."], TextWrapping = TextWrapping.Wrap });
             fields.Children.Add(new TextBlock { Text = text["Translation engine"] });
             engine = new ComboBox { ItemsSource = options.Engines, SelectedItem = options.Engine, HorizontalAlignment = HorizontalAlignment.Stretch,
                 ItemTemplate = new FuncDataTemplate<EngineDescriptor>((item, _) => new TextBlock { Text = item?.DisplayName }) };
@@ -114,6 +121,7 @@ public sealed partial class ProjectDialogs
             options.Engine = engine?.SelectedItem as EngineDescriptor ?? options.Engine;
             options.OllamaModel = model?.SelectedItem as string ?? options.OllamaModel;
             options.ModelPath = modelPath?.Text ?? options.ModelPath;
+            options.TranslationPrompt = prompt?.Text ?? options.TranslationPrompt;
             if (options.Translation && (options.Engine is null || !options.Languages.Contains(options.TargetLanguage) ||
                 (options.Engine.ProviderId == "ollama" && model?.SelectedItem is not string)))
             { status.Text = text["Choose a language, engine and available model before starting."]; return; }

@@ -16,7 +16,9 @@ public sealed class OllamaTests
         var handler = new Handler();
         using var engine = new OllamaTranslationEngine(coordinator, handler);
         Assert.Equal(new[] { "test:8b" }, await engine.ListModelsAsync(default));
-        var result = await engine.TranslateAsync(new("s1", "Hello", "en", "es") { ModelId = "test:8b", Glossary = new Dictionary<string, string> { ["Hello"] = "Hola" } }, default);
+        var result = await engine.TranslateAsync(new("s1", "Hello", "en", "es") { ModelId = "test:8b", Prompt = "Use Spanish from Spain.", Glossary = new Dictionary<string, string> { ["Hello"] = "Hola" } }, default);
+        Assert.Contains("Spanish from Spain", handler.Chat.GetProperty("messages")[0].GetProperty("content").GetString());
+        Assert.Contains("Return JSON", handler.Chat.GetProperty("messages")[0].GetProperty("content").GetString());
         Assert.Equal("Hola", result.Text);
         Assert.Equal(2, handler.Attempts);
         Assert.Equal("s1", handler.Chat.GetProperty("format").GetProperty("properties").GetProperty("segmentId").GetProperty("enum")[0].GetString());
