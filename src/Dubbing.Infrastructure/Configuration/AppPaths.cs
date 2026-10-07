@@ -13,7 +13,9 @@ public static class AppPaths
     public static string Resolve(string path) => Path.IsPathRooted(path) ? path : Path.GetFullPath(Path.Combine(DataRoot, path));
     public static string StorePath(string path)
     {
-        string relative = Path.GetRelativePath(DataRoot, Path.GetFullPath(path));
-        return relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar) && !Path.IsPathRooted(relative) ? relative : path;
+        string full = Path.GetFullPath(path);
+        string inside = Path.GetRelativePath(PortableRoot, full);
+        return inside != ".." && !inside.StartsWith(".." + Path.DirectorySeparatorChar) && !Path.IsPathRooted(inside)
+            ? Path.GetRelativePath(DataRoot, full) : path;
     }
 }

@@ -34,7 +34,7 @@ jobs:
       - name: Smoke-test packaged runtimes and bundled VLC
         shell: pwsh
         run: |
-          if ($IsWindows) { & ./artifacts/releases/OpenDub-0.1.0-win-x64/OpenDub.exe --self-check }
+          if ($IsWindows) { & ./artifacts/releases/OpenDub-0.1.0-win-x64/OpenDub.exe --self-check | Out-Host }
           elseif ($IsMacOS) { & ./artifacts/releases/OpenDub-0.1.0-osx-arm64/OpenDub.app/Contents/MacOS/OpenDub --self-check }
           else { $env:APPIMAGE_EXTRACT_AND_RUN='1'; & ./artifacts/releases/OpenDub-0.1.0-linux-x64.AppImage --self-check }
           if ($LASTEXITCODE -ne 0) { throw 'Packaged runtime self-check failed.' }

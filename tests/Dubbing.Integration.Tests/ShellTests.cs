@@ -80,7 +80,7 @@ public sealed class ShellTests
                 throw new OperationCanceledException();
             }
             catch (OperationCanceledException) { }
-            Assert.Equal("auto", settings.Current.TranslationBackend); Assert.Equal("default.gguf", settings.Current.TranslationModelPath);
+            Assert.Equal("auto", settings.Current.TranslationBackend); Assert.Equal(Dubbing.Infrastructure.Configuration.AppPaths.Resolve("default.gguf"), settings.Current.TranslationModelPath);
             Assert.Equal(saved, await File.ReadAllTextAsync(settings.FilePath));
         }
         finally { Directory.Delete(root, true); }

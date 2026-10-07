@@ -11,7 +11,10 @@ public static class PackageSelfCheck
     {
         if (!OperatingSystem.IsMacOS()) return null;
         string bundled = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Frameworks", "VLC.app", "Contents", "MacOS", "lib"));
-        return Directory.Exists(bundled) ? bundled : "/Applications/VLC.app/Contents/MacOS/lib";
+        string library = Directory.Exists(bundled) ? bundled : "/Applications/VLC.app/Contents/MacOS/lib";
+        string plugins = Path.GetFullPath(Path.Combine(library, "..", "plugins"));
+        if (Directory.Exists(plugins)) Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", plugins);
+        return library;
     }
     public static async Task<int> RunAsync()
     {
@@ -26,7 +29,7 @@ public static class PackageSelfCheck
                 Console.WriteLine(name + " OK");
             }
             LibVLCSharp.Shared.Core.Initialize(VlcDirectory());
-            using var vlc = new LibVLCSharp.Shared.LibVLC("--no-video-title-show");
+            using var vlc = new LibVLCSharp.Shared.LibVLC("--no-video-title-show", "--verbose=2");
             var catalog = new ModelCatalog(Path.Combine(AppContext.BaseDirectory, "engine-catalog"));
             if (catalog.Models.Count != 6) throw new InvalidDataException("Incomplete model catalog.");
             Console.WriteLine(JsonSerializer.Serialize(new { product = "OpenDub", version = "0.1.0", models = catalog.Models.Count, vlc = vlc.Version, status = "ok" }));

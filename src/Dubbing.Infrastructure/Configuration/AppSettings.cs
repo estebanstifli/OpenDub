@@ -41,8 +41,17 @@ public sealed class SettingsStore
         }
         Current = File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath))
             ?? throw new InvalidDataException("Invalid application settings.") : new();
-        Current = Current with { ModelDirectory = AppPaths.Resolve(Current.ModelDirectory), ProjectsDirectory = Current.ProjectsDirectory is { Length: > 0 } root ? AppPaths.Resolve(root) : null };
+        Current = MapPaths(Current, AppPaths.Resolve);
     }
+    private static AppSettings MapPaths(AppSettings settings, Func<string, string> map)
+    {
+        string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : map(value);
+        return settings with { ModelDirectory = map(settings.ModelDirectory), ProjectsDirectory = Optional(settings.ProjectsDirectory),
+            TranslationModelPath = Optional(settings.TranslationModelPath), AudioServerPath = Optional(settings.AudioServerPath),
+            AudioCliPath = Optional(settings.AudioCliPath), ModelManagerPath = Optional(settings.ModelManagerPath),
+            LlamaServerPath = Optional(settings.LlamaServerPath), FFmpegPath = Optional(settings.FFmpegPath), FFprobePath = Optional(settings.FFprobePath) };
+    }
+
     public IDisposable OverrideForOperation(AppSettings settings)
     {
         var previous = Current; Current = settings;
@@ -55,8 +64,8 @@ public sealed class SettingsStore
             throw new ArgumentException("Invalid runtime settings.");
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         string temp = FilePath + ".tmp";
-        var stored = AppPaths.IsPortable ? settings with { ModelDirectory = AppPaths.StorePath(settings.ModelDirectory),
-            ProjectsDirectory = settings.ProjectsDirectory is { Length: > 0 } root ? AppPaths.StorePath(root) : null } : settings;
+        settings = MapPaths(settings, AppPaths.Resolve);
+        var stored = AppPaths.IsPortable ? MapPaths(settings, AppPaths.StorePath) : settings;
         await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(stored, new JsonSerializerOptions { WriteIndented = true }), ct);
         File.Move(temp, FilePath, true); Current = settings;
     }
