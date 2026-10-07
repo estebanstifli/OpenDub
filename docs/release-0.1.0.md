@@ -8,6 +8,8 @@ The development build adds realtime WAV mixing for Studio/Segments, live mute/ga
 
 Playback fixes disable source audio decoding instead of muting the shared Windows sound session. Native regression checks cover the actual output mute, volume and track selection as well as PCM decoding, including separate dub/background auditions of an explicitly supplied project. Segment text editors are 40% shorter (60 px, scrollable). Fresh empty projects are clean until edited; unchanged segment detail values do not create pending changes.
 
+Regenerate and fit keeps candidate WAVs temporary through all synthesis/adaptation/stretch phases. Only completed segment results become active; cancelled or failed fitting preserves previous audio. Overlap review uses final audio and is scoped to the regenerated selection. Progress no longer reaches 100% at the initial TTS pass.
+
 ## Validation boundaries
 
 Windows is the actively exercised development platform. CI runs managed/headless tests and synthetic FFmpeg workflows. Packaging creates Windows ZIP, Linux AppImage/tarball and macOS ARM64 DMG/tarball. Real-device playback and GPU acceptance tests are required before declaring Linux/macOS production-ready. Linux's pinned inference package currently uses CPU; macOS audio.cpp includes Metal and translation detects Metal. Windows bundles CUDA.

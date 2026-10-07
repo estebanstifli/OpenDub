@@ -12,7 +12,8 @@ public partial class MainViewModel
     private RealtimeAudioService? realtimeAudio;
     private bool resolvingCollisions;
     private int realtimeMixVersion;
-    private async Task<bool> ResolveCollisionsAsync(CancellationToken ct)
+    private Task<bool> ResolveCollisionsAsync(CancellationToken ct) => ResolveAffectedCollisionsAsync(ct, null);
+    private async Task<bool> ResolveAffectedCollisionsAsync(CancellationToken ct, HashSet<string>? affectedIds)
     {
         if (resolvingCollisions) return false;
         resolvingCollisions = true;
@@ -22,7 +23,7 @@ public partial class MainViewModel
         {
             while (true)
             {
-                var collision = SegmentCollisions.Find(session.Project);
+                var collision = SegmentCollisions.Find(session.Project, affectedIds);
                 if (collision is null)
                 {
                     var pending = session.Project.Segments.Where(s => merged.Contains(s.Id)).ToArray();
@@ -45,7 +46,7 @@ public partial class MainViewModel
                 session.Update(SegmentCollisions.Resolve(session.Project, collision, decision.Choice));
                 Refresh();
                 if (session.DirectoryPath is not null) await session.SaveAsync(null, ct);
-                if (decision.Choice == CollisionChoice.Merge) merged.Add(collision.First.Id);
+                if (decision.Choice == CollisionChoice.Merge) { merged.Add(collision.First.Id); affectedIds?.Add(collision.First.Id); }
             }
         }
         finally { resolvingCollisions = false; }

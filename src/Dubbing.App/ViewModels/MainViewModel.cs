@@ -245,10 +245,12 @@ public partial class MainViewModel : ObservableObject
         {
             if (!await SaveCoreAsync(ct)) return;
             string directory = session.DirectoryPath!;
-            try { await speech.GenerateAsync(session.Project, directory, ReportProgress(), ct, null, options.FitDuration, SelectedIds(options), options.OverwriteExisting); }
+            var affectedIds = SelectedIds(options).Where(id => session.Project.Segments.Any(s => s.Id == id && !s.ExcludedFromDubbing &&
+                !string.IsNullOrWhiteSpace(s.Translation.Text) && s.Translation.Language == session.Project.Settings.TargetLanguage && (options.OverwriteExisting || !HasAudio(s)))).ToHashSet();
+            try { await speech.GenerateAsync(session.Project, directory, ReportProgress(), ct, null, options.FitDuration, affectedIds, options.OverwriteExisting); }
             finally { await session.OpenAsync(directory, CancellationToken.None); Refresh(); }
             Status = L["Speech generated. Review the timing before exporting."];
-            await ResolveCollisionsAsync(ct);
+            await ResolveAffectedCollisionsAsync(ct, affectedIds);
         }, () => operation?.Cancel());
     });
 
@@ -265,6 +267,7 @@ public partial class MainViewModel : ObservableObject
     private async Task RunAsync(Func<CancellationToken, Task> action, [System.Runtime.CompilerServices.CallerMemberName] string operationName = "")
     {
         if (IsBusy) return;
+        StopAutoSave();
         IsBusy = true; Progress = 0;
         var watch = System.Diagnostics.Stopwatch.StartNew();
         AppendActivity(L.Format("Starting {0}", operationName.Replace("Async", "")));

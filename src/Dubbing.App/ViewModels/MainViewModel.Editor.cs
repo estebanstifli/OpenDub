@@ -204,7 +204,7 @@ public partial class MainViewModel
         if (!await SaveCoreAsync(ct)) return;
         try { await speech.GenerateAsync(session.Project, session.DirectoryPath!, ReportProgress(), ct, id, fitDuration, overwriteExisting: true); }
         finally { await session.OpenAsync(session.DirectoryPath!, CancellationToken.None); Refresh(); }
-        await ResolveCollisionsAsync(ct);
+        await ResolveAffectedCollisionsAsync(ct, [id]);
     }
     [RelayCommand] private async Task ReanalyzeAsync() => await RunAsync(async ct =>
     {
@@ -322,6 +322,7 @@ public partial class MainViewModel
             }
             if (session.DirectoryPath is null || !session.IsDirty) return;
             await session.SaveAsync(null, ct); IsDirty = session.IsDirty;
+            if (IsBusy) return;
             if (SegmentCollisions.Find(session.Project) is not null)
                 await RunAsync(async token => { await ResolveCollisionsAsync(token); }, "Review overlaps");
             if (IsPlaybackRunning) await UpdateRealtimeMixAsync();

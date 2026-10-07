@@ -324,5 +324,6 @@
   "Segments merged. Complete the translation, then generate speech.": "Segments merged. Complete the translation, then generate speech.",
   "Generating the merged dialogue…": "Generating the merged dialogue…",
   "Realtime audio playback failed. Check the active WAV files.": "Realtime audio playback failed. Check the active WAV files.",
-  "Review overlaps": "Review overlaps"
+  "Review overlaps": "Review overlaps",
+  "Speech operation complete. Final audio is ready for overlap review.": "Speech operation complete. Final audio is ready for overlap review."
 }

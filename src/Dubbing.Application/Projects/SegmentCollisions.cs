@@ -11,7 +11,7 @@ public sealed record CollisionDecision(CollisionChoice Choice, bool ApplyToAll =
 
 public static class SegmentCollisions
 {
-    public static SegmentCollision? Find(DubbingProject project)
+    public static SegmentCollision? Find(DubbingProject project, IReadOnlySet<string>? affectedIds = null)
     {
         var active = project.Segments.Select((s, i) => (Segment: s, Number: i + 1)).Where(x => !x.Segment.ExcludedFromDubbing).OrderBy(x => x.Segment.Start).ToArray();
         for (int i = 0; i < active.Length; i++)
@@ -21,6 +21,7 @@ public static class SegmentCollisions
             for (int j = i + 1; j < active.Length && active[j].Segment.Start < end - TimeSpan.FromMilliseconds(2); j++)
             {
                 var b = active[j];
+                if (affectedIds is not null && !affectedIds.Contains(a.Segment.Id) && !affectedIds.Contains(b.Segment.Id)) continue;
                 string key = StageCache.Key(a.Segment.Id, a.Segment.Start, a.Segment.End, speech?.Fingerprint, speech?.Duration, a.Segment.ClipAudioToSlot,
                     b.Segment.Id, b.Segment.Start, b.Segment.End, ProjectAudioMix.EffectiveSpeech(b.Segment)?.Fingerprint);
                 if (!project.AcceptedOverlaps.Contains(key)) return new(key, a.Segment, b.Segment, a.Number, b.Number, end);

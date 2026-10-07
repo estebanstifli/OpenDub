@@ -230,5 +230,6 @@
   "Segments merged. Complete the translation, then generate speech.": "Segmentos unidos. Completa la traducción y genera la voz.",
   "Generating the merged dialogue…": "Generando el diálogo unido…",
   "Realtime audio playback failed. Check the active WAV files.": "Falló la reproducción de audio en tiempo real. Revisa los WAV activos.",
-  "Review overlaps": "Revisar solapamientos"
+  "Review overlaps": "Revisar solapamientos",
+  "Speech operation complete. Final audio is ready for overlap review.": "Generación y ajuste terminados. El audio final está listo para revisar solapamientos."
 }

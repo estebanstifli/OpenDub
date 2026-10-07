@@ -33,7 +33,10 @@ public sealed class BatchResidencyTests
                 Assert.Equal(TimeSpan.FromSeconds(fitDuration ? 2 : 3), s.GeneratedSpeech!.Duration);
                 Assert.Equal(!fitDuration, s.DirtyStages.Contains(PipelineStage.DurationFit));
             });
-            Assert.True(store.Writes >= (fitDuration ? 6 : 3));
+            Assert.Equal(3, store.Writes); // Publish each completed segment, never retry candidates.
+            if (fitDuration) Assert.All(store.Snapshots.SelectMany(p => p.Segments).Where(s => s.GeneratedSpeech is not null),
+                s => Assert.Equal(TimeSpan.FromSeconds(2), s.GeneratedSpeech!.Duration));
+            Assert.Empty(Directory.GetFiles(Path.Combine(root, "cache", "tts-work"), "*", SearchOption.AllDirectories));
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
@@ -99,7 +102,8 @@ public sealed class BatchResidencyTests
     private sealed class Store : IProjectStore
     {
         public int Writes;
-        public Task SaveAsync(DubbingProject project, string directory, CancellationToken ct) { Writes++; return Task.CompletedTask; }
+        public List<DubbingProject> Snapshots { get; } = [];
+        public Task SaveAsync(DubbingProject project, string directory, CancellationToken ct) { Writes++; Snapshots.Add(project); return Task.CompletedTask; }
         public Task<DubbingProject> LoadAsync(string directory, CancellationToken ct) => throw new NotSupportedException();
     }
 }

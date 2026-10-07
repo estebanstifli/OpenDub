@@ -32,6 +32,51 @@ public static class TestAppBuilder
 public sealed class ShellTests
 {
     [AvaloniaFact]
+    public async Task RegenerateAndFitWaitsForFinalAudioAndIgnoresUnrelatedOverlaps()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "fit-dialog-" + Guid.NewGuid());
+        var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
+        var engine = new GatedFitSpeech(); var registry = new EngineRegistry([engine]);
+        var factory = new ProjectFactory(registry); var session = new ProjectSession(store); var dialogs = new FakeDialogs(root);
+        var media = new FFmpegMediaEngine(new ProcessRunner(NullLogger<ProcessRunner>.Instance), new RuntimeLocator(), new());
+        var vm = new MainViewModel(session, factory, registry, dialogs, new TimelineBuilder(), new TranslationService(registry), NullLogger<MainViewModel>.Instance,
+            new ImportVideoService(media, store, registry, new TimelineBuilder()),
+            new GenerateSpeechService(new EngineSelectionService(registry), store, new DurationFitService(null!, registry)),
+            new ExportVideoService(media, new DubRenderService(media), store));
+        var first = new DubSegment { End = TimeSpan.FromSeconds(2), Translation = new("es", "Texto"), GeneratedSpeech = new("old.wav", TimeSpan.FromSeconds(2), "old", "old"), DirtyStages = [] };
+        try
+        {
+            await store.SaveAsync(factory.Create() with { Segments = [first, new() { Start = TimeSpan.FromSeconds(2), End = TimeSpan.FromSeconds(4) },
+                new() { Start = TimeSpan.FromSeconds(10), End = TimeSpan.FromSeconds(12) }, new() { Start = TimeSpan.FromSeconds(11), End = TimeSpan.FromSeconds(13) }] }, root, default);
+            await vm.OpenCommand.ExecuteAsync(null); vm.SelectedSegment = vm.Segments[0];
+            var work = vm.RegenerateAndFitCommand.ExecuteAsync(null);
+            await engine.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await Task.Delay(900); // Let any pending autosave timer run while the candidate exists.
+            Assert.True(vm.IsBusy); Assert.Equal(0, dialogs.CollisionReviews);
+            Assert.Equal(first.GeneratedSpeech, (await store.LoadAsync(root, default)).Segments[0].GeneratedSpeech);
+            engine.Continue.TrySetResult(); await work;
+            Assert.Equal(2, engine.Calls); Assert.Equal(0, dialogs.CollisionReviews);
+            Assert.Equal(TimeSpan.FromSeconds(2), ProjectAudioMix.EffectiveDuration(session.Project.Segments[0]));
+            Assert.NotNull(SegmentCollisions.Find(session.Project)); // The unrelated pair still needs its own review.
+            Assert.Null(SegmentCollisions.Find(session.Project, new HashSet<string> { first.Id }));
+        }
+        finally { engine.Continue.TrySetResult(); vm.StopAutoSave(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+    private sealed class GatedFitSpeech : Dubbing.Core.Engines.ITtsEngine
+    {
+        public int Calls;
+        public TaskCompletionSource Entered { get; } = new();
+        public TaskCompletionSource Continue { get; } = new();
+        public Dubbing.Core.Engines.EngineDescriptor Descriptor => new MockTtsEngine().Descriptor with { Capabilities = new() { SupportsSpeakingRate = true } };
+        public async Task<Dubbing.Core.Engines.TtsResult> SynthesizeAsync(Dubbing.Core.Engines.TtsRequest request, IProgress<Dubbing.Core.Engines.EngineProgress>? progress, CancellationToken ct)
+        {
+            Calls++;
+            var result = await new MockTtsEngine().SynthesizeAsync(request with { TargetDuration = TimeSpan.FromSeconds(Calls == 1 ? 3 : 2) }, progress, ct);
+            if (Calls == 1) { Entered.TrySetResult(); await Continue.Task.WaitAsync(ct); }
+            return result;
+        }
+    }
+    [AvaloniaFact]
     public async Task OverlapDialogUsesVisibleOwnerAndRequiresExplicitDecision()
     {
         var owner = new Window(); owner.Show();
@@ -653,7 +698,8 @@ public sealed class ShellTests
     private sealed class FakeDialogs(string directory) : IProjectDialogs
     {
         public CollisionChoice Collision { get; set; } = CollisionChoice.Cancel;
-        public Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision collision) => Task.FromResult(new CollisionDecision(Collision));
+        public int CollisionReviews { get; private set; }
+        public Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision collision) { CollisionReviews++; return Task.FromResult(new CollisionDecision(Collision)); }
         public UnsavedChoice Choice { get; set; } = UnsavedChoice.Discard;
         public int Confirmations { get; private set; }
         public Task<UnsavedChoice> ConfirmUnsavedAsync() { Confirmations++; return Task.FromResult(Choice); }
