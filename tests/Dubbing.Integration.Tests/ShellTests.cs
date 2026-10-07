@@ -498,6 +498,9 @@ public sealed class ShellTests
             await vm.NewCommand.ExecuteAsync(null);
             Assert.Empty(vm.Segments);
             await vm.OpenCommand.ExecuteAsync(null);
+            Assert.False(vm.IsDirty);
+            await vm.ApplySegmentCommand.ExecuteAsync(null);
+            Assert.False(vm.IsDirty);
             Assert.True(vm.IsOllamaSelected);
             Assert.Equal("test:8b", vm.SelectedOllamaModel);
             Assert.Equal("test:8b", session.Project.Settings.TranslationModelId);
@@ -636,6 +639,11 @@ public sealed class ShellTests
             new TimelineBuilder(), new TranslationService(registry), NullLogger<MainViewModel>.Instance,
             new ImportVideoService(media, store, registry, new TimelineBuilder()), new GenerateSpeechService(new EngineSelectionService(registry), store),
             new ExportVideoService(media, new DubRenderService(media), store));
+        Assert.False(vm.IsDirty);
+        await vm.ImportVideoCommand.ExecuteAsync(null);
+        await vm.NewCommand.ExecuteAsync(null);
+        Assert.True(await vm.CanCloseAsync());
+        Assert.Equal(0, dialogs.Confirmations);
         vm.ProjectName = "No perder";
         await vm.NewCommand.ExecuteAsync(null);
         Assert.Equal("No perder", vm.ProjectName);
@@ -647,7 +655,8 @@ public sealed class ShellTests
         public CollisionChoice Collision { get; set; } = CollisionChoice.Cancel;
         public Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision collision) => Task.FromResult(new CollisionDecision(Collision));
         public UnsavedChoice Choice { get; set; } = UnsavedChoice.Discard;
-        public Task<UnsavedChoice> ConfirmUnsavedAsync() => Task.FromResult(Choice);
+        public int Confirmations { get; private set; }
+        public Task<UnsavedChoice> ConfirmUnsavedAsync() { Confirmations++; return Task.FromResult(Choice); }
         public Task<string?> NewProjectDirectoryAsync(string name) => Task.FromResult<string?>(directory);
         public Task<string?> OpenProjectAsync() => Task.FromResult<string?>(directory);
         public Task<string?> OpenVideoAsync() => Task.FromResult<string?>(null);

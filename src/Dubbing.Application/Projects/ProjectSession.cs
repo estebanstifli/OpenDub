@@ -10,17 +10,17 @@ public sealed class ProjectSession(IProjectStore store)
     public string? DirectoryPath { get; private set; }
     public bool IsDirty => revision != savedRevision;
 
-    public void New(DubbingProject project)
+    public void New(DubbingProject project, bool markDirty = true)
     {
         Project = project;
         DirectoryPath = null;
         revision++;
-        savedRevision = revision - 1;
+        savedRevision = markDirty ? revision - 1 : revision;
     }
 
     public void Update(DubbingProject project)
     {
-        if (ReferenceEquals(project, Project)) return;
+        if (project == Project) return;
         Project = project;
         revision++;
     }

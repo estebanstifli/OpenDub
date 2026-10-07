@@ -138,6 +138,9 @@ public partial class MainViewModel
             Editor.EmotionMode == old.EmotionMode && Editor.EmotionText == old.EmotionText && Editor.Intensity == old.Intensity &&
             Editor.EmotionReference == old.EmotionReference && Editor.EmotionVector == old.EmotionVector && Editor.Speed == old.Speed &&
             Editor.Seed == old.Seed && Editor.AdvancedOptions == old.AdvancedOptions;
+        if (placementOnly && TimeSpan.FromSeconds(Editor.StartSeconds) == previous.Start && TimeSpan.FromSeconds(Editor.EndSeconds) == previous.End &&
+            Editor.ClipAudioToSlot == previous.ClipAudioToSlot && Editor.ExcludedFromDubbing == previous.ExcludedFromDubbing)
+        { pendingSegmentEdits = false; return; }
         bool translationChanged = Editor.TranslationText != previous.Translation.Text;
         var emotion = new EmotionDescriptor { Mode = Editor.EmotionMode, Label = Editor.EmotionMode == EmotionMode.Label ? Editor.EmotionText : null,
             Instruction = Editor.EmotionMode == EmotionMode.Instruction ? Editor.EmotionText : null, Intensity = Editor.Intensity,

@@ -5,6 +5,16 @@ namespace Dubbing.Application.Tests;
 
 public sealed class SessionTests
 {
+    [Fact] public void PristineProjectOnlyBecomesDirtyAfterAnEdit()
+    {
+        var session = new ProjectSession(new DelayedStore());
+        session.New(new(), markDirty: false);
+        Assert.False(session.IsDirty);
+        session.Update(session.Project with { Name = session.Project.Name });
+        Assert.False(session.IsDirty);
+        session.Update(session.Project with { Name = "Changed" });
+        Assert.True(session.IsDirty);
+    }
     [Fact] public async Task EditsDuringSaveRemainDirty()
     {
         var store = new DelayedStore();

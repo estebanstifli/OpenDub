@@ -63,7 +63,7 @@ public partial class MainViewModel : ObservableObject
             if (!loadingSegment && !refreshing && SelectedSegment is not null && args.PropertyName != nameof(Editor.DurationSummary))
             { pendingSegmentEdits = true; IsDirty = true; ScheduleAutoSave(); }
         };
-        session.New(CreateDefaultProject());
+        session.New(CreateDefaultProject(), markDirty: false);
         Refresh();
     }
 
@@ -87,7 +87,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand] private async Task NewAsync() => await RunAsync(async ct =>
     {
         if (!await ResolveUnsavedAsync(ct)) return;
-        StopPlayback(); session.New(CreateDefaultProject()); Refresh(); Status = L["Project created."];
+        StopPlayback(); session.New(CreateDefaultProject(), markDirty: false); Refresh(); Status = L["Project created."];
     });
 
     [RelayCommand] private async Task OpenAsync() => await RunAsync(async ct =>

@@ -6,6 +6,8 @@ Adds first-run model setup, sequential resumable verified downloads, portable da
 
 The development build adds realtime WAV mixing for Studio/Segments, live mute/gain, synchronized muted video, and overlap decisions (limit, merge/regenerate, keep or cancel). Moving clips preserves their WAVs and source references. A complete mix is rendered only for export/offline render calls. See [audio lifecycle](audio-segment-lifecycle.md) for timing behavior and Windows measurements. Existing published release archives do not update automatically when source changes land.
 
+Playback fixes disable source audio decoding instead of muting the shared Windows sound session. Native regression checks cover the actual output mute, volume and track selection as well as PCM decoding, including separate dub/background auditions of an explicitly supplied project. Segment text editors are 40% shorter (60 px, scrollable). Fresh empty projects are clean until edited; unchanged segment detail values do not create pending changes.
+
 ## Validation boundaries
 
 Windows is the actively exercised development platform. CI runs managed/headless tests and synthetic FFmpeg workflows. Packaging creates Windows ZIP, Linux AppImage/tarball and macOS ARM64 DMG/tarball. Real-device playback and GPU acceptance tests are required before declaring Linux/macOS production-ready. Linux's pinned inference package currently uses CPU; macOS audio.cpp includes Metal and translation detects Metal. Windows bundles CUDA.

@@ -33,18 +33,23 @@ public partial class MainWindow
             while (player is not null && player.State is not (VLCState.Playing or VLCState.Paused))
             { await Task.Delay(15, timeout.Token); if (version != realtimeVersion) return; }
             if (version != realtimeVersion || player is null || vlc is null) return;
-            player.Mute = true; player.SetPause(true); player.Time = realtimePendingTime;
+            player.SetAudioTrack(-1); player.SetPause(true); player.Time = realtimePendingTime;
             pauseOnStart = false;
             if (realtimePlayer is null)
             {
                 realtimeInput = new StreamMediaInput(realtimeStream);
                 realtimePlayer = new MediaPlayer(vlc);
                 var created = realtimePlayer;
+                // Restore the device output; per-track mute/gain lives in the PCM mixer.
+                ConfigureRealtimeAudio(created);
+                created.ESAdded += (_, _) => Dispatcher.UIThread.Post(() => ConfigureRealtimeAudio(created));
                 realtimePlayer.Playing += (_, _) => Dispatcher.UIThread.Post(() =>
                 {
                     if (!realtimeMode || !ReferenceEquals(realtimePlayer, created) || player is null) return;
                     realtimePlayer.Time = realtimePendingTime;
-                    player.Time = realtimePendingTime; pauseOnStart = false; player.SetPause(false); player.Mute = true;
+                    player.Time = realtimePendingTime; pauseOnStart = false; player.SetPause(false); player.SetAudioTrack(-1);
+                    ConfigureRealtimeAudio(created);
+                    ActivityJournal.Write($"Realtime audio output · mute={created.Mute} · volume={created.Volume}% · track={created.AudioTrack}.");
                     if (attached is not null) attached.IsPlaybackRunning = true;
                 });
                 realtimePlayer.EndReached += (_, _) => Dispatcher.UIThread.Post(() => { if (!ReferenceEquals(realtimePlayer, created)) return; player?.SetPause(true); if (attached is not null) attached.IsPlaybackRunning = false; });
@@ -69,6 +74,14 @@ public partial class MainWindow
             if (version != realtimeVersion) return;
             Stop(); if (attached is not null) attached.Status = attached.L.Format("Playback unavailable: {0}", ex.Message);
         }
+    }
+    private void ConfigureRealtimeAudio(MediaPlayer current)
+    {
+        if (!realtimeMode || !ReferenceEquals(realtimePlayer, current)) return;
+        current.Mute = false;
+        current.Volume = 100;
+        if (current.AudioTrack < 0 && current.AudioTrackDescription.FirstOrDefault(t => t.Id >= 0) is { } track && track.Id >= 0)
+            current.SetAudioTrack(track.Id);
     }
     private Task UpdateRealtimeAsync(RealtimePlaybackPlan plan)
     {

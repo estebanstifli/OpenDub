@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     private MainViewModel? attached;
     private readonly DispatcherTimer playbackClock = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private string? playbackPath;
+    private bool playbackVideoOnly;
     private bool pauseOnStart;
     private bool seekLoad;
     private long pendingTime;
@@ -108,7 +109,7 @@ public partial class MainWindow : Window
                     ConfigurePlaybackAudio();
                     player.Time = pendingTime;
                     if (pauseOnStart) { player.SetPause(true); player.NextFrame(); pauseOnStart = false; }
-                    player.Mute = realtimeMode;
+                    if (realtimeMode) player.SetAudioTrack(-1); else player.Mute = false;
                     if (attached is not null) attached.IsPlaybackRunning = player.IsPlaying;
                 });
                 player.ESAdded += (_, _) => Dispatcher.UIThread.Post(ConfigurePlaybackAudio);
@@ -116,11 +117,13 @@ public partial class MainWindow : Window
                 player.EncounteredError += (_, _) => Dispatcher.UIThread.Post(() => { if (attached is not null) attached.Status = attached.L["Playback failed. Check the media file and VLC installation."]; });
             }
             pauseOnStart = seekLoad || realtimeMode; pendingTime = (long)offset.TotalMilliseconds; timelineOffset = attached?.PlaybackTimelineOffset ?? 0; trackTime = attached?.TrackPlayback ?? true;
-            player!.Mute = seekLoad || realtimeMode;
-            player.Volume = 100;
+            // Muting one VLC player can mute their shared Windows audio session.
+            // Suppress the video's audio decoder instead; the PCM player owns sound.
+            if (realtimeMode) player!.SetAudioTrack(-1);
+            else { player!.Mute = seekLoad; player.Volume = 100; }
             // Source and content-keyed dub previews are immutable; other generated paths may be overwritten.
-            if (!loadingMedia && playbackPath == path && (path == attached?.VideoPath || path == attached?.DubPreviewPath)) { player!.Time = pendingTime; player.Play(); return; }
-            player!.Stop(); playbackPath = path; loadingMedia = true;
+            if (!loadingMedia && playbackVideoOnly == realtimeMode && playbackPath == path && (path == attached?.VideoPath || path == attached?.DubPreviewPath)) { player!.Time = pendingTime; player.Play(); return; }
+            player!.Stop(); playbackPath = path; playbackVideoOnly = realtimeMode; loadingMedia = true;
             Dubbing.Infrastructure.Processes.ActivityJournal.Write($"Playback · {Path.GetFileName(path)} · refreshed media · {offset.TotalSeconds:F2} s");
             using var media = new LibVLCSharp.Shared.Media(vlc, new Uri(Path.GetFullPath(path)));
             await media.Parse(MediaParseOptions.ParseLocal, 5000);
@@ -133,6 +136,7 @@ public partial class MainWindow : Window
                 ? media.Tracks.Where(t => t.TrackType == TrackType.Audio).Select(t => (int?)t.Id).ElementAtOrDefault(attached.SourceAudioOrdinal)
                 : media.Tracks.Where(t => t.TrackType == TrackType.Audio).Select(t => (int?)t.Id).FirstOrDefault();
             loadingMedia = false;
+            if (playbackVideoOnly) media.AddOption(":no-audio");
             media.AddOption(":start-time=" + (pendingTime / 1000d).ToString(System.Globalization.CultureInfo.InvariantCulture));
             player.Play(media);
         }
@@ -141,7 +145,7 @@ public partial class MainWindow : Window
     private void ConfigurePlaybackAudio()
     {
         if (player is null) return;
-        if (realtimeMode) { player.Mute = true; return; }
+        if (realtimeMode) { player.SetAudioTrack(-1); return; }
         player.Volume = 100;
         player.Mute = false;
         var tracks = player.AudioTrackDescription.Where(t => t.Id >= 0).ToArray();

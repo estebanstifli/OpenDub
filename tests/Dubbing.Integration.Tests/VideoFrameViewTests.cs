@@ -10,6 +10,48 @@ namespace Dubbing.Integration.Tests;
 
 public sealed class VideoFrameViewTests
 {
+    [ProjectPlaybackFact] public async Task ExistingProjectPlaysDubAndBackgroundThroughEnabledAudioOutput()
+    {
+        string directory = Environment.GetEnvironmentVariable("OPENDUB_PLAYBACK_PROJECT")!;
+        var store = new Dubbing.Infrastructure.Projects.JsonProjectStore(new Dubbing.Infrastructure.Projects.ProjectJson(), NullLogger<Dubbing.Infrastructure.Projects.JsonProjectStore>.Instance);
+        var project = await store.LoadAsync(directory, default);
+        var runner = new ProcessRunner(NullLogger<ProcessRunner>.Instance);
+        var media = new Dubbing.Media.FFmpeg.FFmpegMediaEngine(runner, new RuntimeLocator(), new(Environment.GetEnvironmentVariable("DUBBING_FFMPEG"), Environment.GetEnvironmentVariable("DUBBING_FFPROBE")));
+        var service = new Dubbing.Application.Playback.RealtimeAudioService(media);
+        var dub = await service.PrepareAsync(project, directory, null, default, Dubbing.Application.Pipeline.AudioAudition.Dub);
+        var background = await service.PrepareAsync(project, directory, null, default, Dubbing.Application.Pipeline.AudioAudition.Background);
+        Assert.NotEmpty(dub.Clips); Assert.NotEmpty(background.Clips);
+        var position = dub.Clips.First().Start + TimeSpan.FromSeconds(.5);
+        foreach (var plan in new[] { dub, background })
+        {
+            using var pcm = new Dubbing.Application.Playback.TimelineAudioStream(plan.Duration);
+            pcm.Update(plan.Clips); pcm.Position = 80 + (long)(position.TotalSeconds * 48000) * 4;
+            var samples = new byte[9600]; pcm.ReadExactly(samples);
+            Assert.Contains(samples, b => b != 0);
+        }
+        var session = Avalonia.Headless.HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        await session.Dispatch(async () =>
+        {
+            var window = new Dubbing.App.MainWindow(); window.Show();
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var play = typeof(Dubbing.App.MainWindow).GetMethod("PlayRealtimeAsync", flags)!;
+            try
+            {
+                foreach (var plan in new[] { background, dub })
+                {
+                    await (Task)play.Invoke(window, [plan, position])!;
+                    var audio = (MediaPlayer)typeof(Dubbing.App.MainWindow).GetField("realtimePlayer", flags)!.GetValue(window)!;
+                    var video = (MediaPlayer)typeof(Dubbing.App.MainWindow).GetField("player", flags)!.GetValue(window)!;
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                    while (audio.Time < position.TotalMilliseconds + 300) await Task.Delay(30, timeout.Token);
+                    Assert.False(audio.Mute); Assert.Equal(100, audio.Volume); Assert.True(audio.AudioTrack >= 0);
+                    Assert.True(video.AudioTrack < 0);
+                }
+            }
+            finally { window.Close(); }
+            return true;
+        }, default);
+    }
     [RuntimeFact] public async Task RealtimePlayerKeepsVideoMutedAndSupportsSeekPauseResume()
     {
         var session = Avalonia.Headless.HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
@@ -33,7 +75,10 @@ public sealed class VideoFrameViewTests
                 var audio = Assert.IsType<MediaPlayer>(Field("realtimePlayer"));
                 var player = Assert.IsType<MediaPlayer>(Field("player"));
                 await WaitFor(() => audio.Time > 1500 && player.IsPlaying);
-                Assert.True(player.Mute);
+                Assert.False(audio.Mute);
+                Assert.True(audio.Volume > 0);
+                Assert.True(audio.AudioTrack >= 0);
+                Assert.True(player.AudioTrack < 0);
                 Assert.NotNull(window.FindControl<VideoFrameView>("VideoSurface")!.Source);
                 Call("Pause"); await WaitFor(() => audio.State == VLCState.Paused && player.State == VLCState.Paused);
                 Call("Seek", 6d); await WaitFor(() => audio.Time >= 5900);
@@ -41,15 +86,18 @@ public sealed class VideoFrameViewTests
                 await WaitFor(() => audio.Time > 6500 && player.Time > 6200);
                 Call("SynchronizeVideo"); await Task.Delay(250);
                 Assert.True(Math.Abs(audio.Time - player.Time) < 600, $"audio={audio.Time}, video={player.Time}");
-                Assert.True(player.Mute);
+                Assert.True(player.AudioTrack < 0); Assert.False(audio.Mute); Assert.Equal(100, audio.Volume);
                 await (Task)Call("UpdateRealtimeAsync", plan with { Clips = [] })!;
                 Assert.True(audio.IsPlaying);
                 Call("Seek", 11.6d);
                 await WaitFor(() => audio.State == VLCState.Ended);
                 await (Task)Call("PlayRealtimeAsync", plan, TimeSpan.FromSeconds(1))!;
                 await WaitFor(() => audio.IsPlaying && audio.Time > 1400 && audio.Time < 5000);
-                Assert.True(player.Mute);
+                Assert.True(player.AudioTrack < 0); Assert.False(audio.Mute);
                 Call("Stop"); Assert.Null(Field("realtimePlayer"));
+                await (Task)Call("PlayMediaAsync", video, TimeSpan.FromSeconds(1))!;
+                await WaitFor(() => player.IsPlaying && player.AudioTrack >= 0);
+                Assert.False(player.Mute);
             }
             finally { window.Close(); Directory.Delete(root, true); }
             return true;
@@ -158,5 +206,14 @@ public sealed class VideoFrameViewTests
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             while (!condition()) await Task.Delay(20, timeout.Token);
         }
+    }
+}
+
+public sealed class ProjectPlaybackFactAttribute : FactAttribute
+{
+    public ProjectPlaybackFactAttribute()
+    {
+        if (Environment.GetEnvironmentVariable("DUBBING_NATIVE_TESTS") != "1" || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OPENDUB_PLAYBACK_PROJECT")))
+            Skip = "Requires native VLC and an explicit OPENDUB_PLAYBACK_PROJECT (read-only).";
     }
 }

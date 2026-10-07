@@ -72,10 +72,10 @@
 <Grid ColumnDefinitions="18,*,*" ColumnSpacing="10" Margin="0,6">
 <TextBlock Text="▶" Foreground="White" IsVisible="{Binding IsActive}" VerticalAlignment="Center"/>
 <StackPanel Grid.Column="1" Spacing="6"><TextBlock Text="{Binding Number, StringFormat='{}{0}'}" FontWeight="Bold"/><TextBlock Text="{Binding Timing}" Foreground="#64D8CB" FontSize="11"/>
-<TextBox Text="{Binding SourceText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" GotFocus="SegmentTextFocused"/>
+<TextBox Text="{Binding SourceText}" AcceptsReturn="True" TextWrapping="Wrap" Height="60" ScrollViewer.VerticalScrollBarVisibility="Auto" GotFocus="SegmentTextFocused"/>
 <TextBlock Text="{Binding Speaker}" Classes="muted"/></StackPanel>
 <StackPanel Grid.Column="2" Spacing="6"><TextBlock Text="{Binding Number, StringFormat='{}{0}'}" FontWeight="Bold"/><TextBlock Text="{Binding Timing}" Foreground="#64D8CB" FontSize="11"/>
-<TextBox Text="{Binding TranslationText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" GotFocus="SegmentTextFocused"/>
+<TextBox Text="{Binding TranslationText}" AcceptsReturn="True" TextWrapping="Wrap" Height="60" ScrollViewer.VerticalScrollBarVisibility="Auto" GotFocus="SegmentTextFocused"/>
 <TextBlock Text="{Binding State}" Classes="muted" FontSize="11"/></StackPanel>
 </Grid></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
 <GridSplitter Grid.Column="1" Width="5" Background="#263A52"/>

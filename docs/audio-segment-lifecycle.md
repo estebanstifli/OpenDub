@@ -16,7 +16,7 @@ Very short segments can be expanded before synthesis where neighboring free time
 
 ## Dynamic playback
 
-Studio and Segments Play use the same realtime mixer. The original video plays muted. A second VLC player consumes a seekable virtual RF64 WAV, generated in small PCM blocks in memory from the individual active WAV files. No complete preview WAV or MKV is written. The audio clock drives the playhead; the video clock is corrected when drift exceeds 200 ms, at most once per second. Both players pause, resume and seek together.
+Studio and Segments Play use the same realtime mixer. The original video's audio decoding is disabled (`:no-audio`); its VLC player must not use device mute, which can silence both players through their shared Windows audio session. A second VLC player, explicitly unmuted at 100% device volume, consumes a seekable virtual RF64 WAV generated in small PCM blocks in memory from the individual active WAV files. Track mute/gain lives in this PCM mix. No complete preview WAV or MKV is written. The audio clock drives the playhead; the video clock is corrected when drift exceeds 200 ms, at most once per second. Both players pause, resume and seek together.
 
 Preview is stereo, 48 kHz PCM. Mono/stereo PCM16/24/32 and float32 WAVs are read directly; other formats are converted once per file into `cache/pcm-clips/`, then reused. Source handles and decoded blocks are bounded (32 files, four 4096-frame blocks per file). Seeking reads blocks near the new cursor instead of decoding the preceding film. Resampling and gain apply while mixing. Preview clamps peaks to 0.95; final export uses FFmpeg's limiter, so overloaded mixes can sound different. Lower gains to avoid clipping.
 
