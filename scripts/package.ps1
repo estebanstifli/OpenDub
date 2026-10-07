@@ -15,7 +15,7 @@ $package = Join-Path $releaseRoot $PackageName
 $output = if ($Runtime -eq 'osx-arm64') { Join-Path $package 'OpenDub.app/Contents/MacOS' } else { $package }
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $sdk = if ($IsWindows -and (Test-Path -LiteralPath "$env:LOCALAPPDATA/DubbingApp/dotnet/dotnet.exe")) { "$env:LOCALAPPDATA/DubbingApp/dotnet/dotnet.exe" } else { (Get-Command dotnet).Source }
-& $sdk publish (Join-Path $projectRoot 'src/Dubbing.App/Dubbing.App.csproj') -c Release -r $Runtime --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -p:RestoreLockedMode=false -p:RestorePackagesWithLockFile=false -o $output
+& $sdk publish (Join-Path $projectRoot 'src/Dubbing.App/Dubbing.App.csproj') -c Release -r $Runtime --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -p:RestoreLockedMode=false -p:NuGetLockFilePath=obj/packages.publish.lock.json -o $output
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
 # The NuGet lock is shared across hosts; trim unused Windows VLC architectures only inside this output.
 $vlcRoot = [IO.Path]::GetFullPath((Join-Path $output 'libvlc'))
