@@ -218,5 +218,17 @@
   "Allow duration mismatches (speech may overlap)": "Permitir desajustes de duración (pueden solaparse las voces)",
   "Keeps each WAV at its segment start without moving later segments or cutting speech. Short clips leave silence; long clips may overlap. Missing, outdated or externally modified audio still blocks export.": "Mantiene cada WAV en el inicio de su segmento sin desplazar los siguientes ni recortar la voz. Los clips cortos dejan silencio; los largos pueden solaparse. El audio ausente, desactualizado o modificado externamente sigue bloqueando la exportación.",
   "Media processing complete.": "Procesamiento multimedia completado.",
-  "Generate or regenerate before exporting: {0}": "Generar o regenerar antes de exportar: {0}"
+  "Generate or regenerate before exporting: {0}": "Generar o regenerar antes de exportar: {0}",
+  "Overlapping dialogue": "Diálogo solapado",
+  "Segment {0} reaches segment {1}.": "El segmento {0} alcanza al segmento {1}.",
+  "Do not overlap trims excess audio at the boundary; this may cut speech. Merge joins both texts and regenerates speech using the first speaker. Keep overlap plays both voices together.": "No solapar recorta el audio sobrante en el límite; puede cortar palabras. Unir combina los textos y regenera la voz con el primer hablante. Mantener solapamiento reproduce ambas voces a la vez.",
+  "Apply to remaining overlaps (limit or keep only)": "Aplicar al resto de solapamientos (solo limitar o mantener)",
+  "Do not overlap": "No solapar",
+  "Merge segments": "Unir segmentos",
+  "Keep overlap": "Mantener solapamiento",
+  "Limit audio to segment end (cuts excess speech)": "Limitar audio al final del segmento (recorta la voz sobrante)",
+  "Segments merged. Complete the translation, then generate speech.": "Segmentos unidos. Completa la traducción y genera la voz.",
+  "Generating the merged dialogue…": "Generando el diálogo unido…",
+  "Realtime audio playback failed. Check the active WAV files.": "Falló la reproducción de audio en tiempo real. Revisa los WAV activos.",
+  "Review overlaps": "Revisar solapamientos"
 }

@@ -32,8 +32,11 @@ public partial class MainWindow : Window
         ActivityBox.TextChanged += (_, _) => { if (attached?.FollowActivity == true) ActivityBox.CaretIndex = ActivityBox.Text?.Length ?? 0; };
         playbackClock.Tick += (_, _) =>
         {
-            if (attached is null || player is null || !player.IsPlaying || !trackTime || Timeline.IsDragging) return;
-            attached.UpdatePlaybackPosition(timelineOffset + player.Time / 1000d);
+            if (attached is null || player is null || !trackTime || Timeline.IsDragging) return;
+            var master = realtimeMode ? realtimePlayer : player;
+            if (master?.IsPlaying != true) return;
+            SynchronizeVideo();
+            attached.UpdatePlaybackPosition(timelineOffset + master.Time / 1000d);
             double x = Timeline.Gutter + attached.Playhead / Math.Max(1, attached.VideoDuration) * (Timeline.Bounds.Width - Timeline.Gutter - 8);
             if (x > TimelineScroller.Offset.X + TimelineScroller.Viewport.Width - 20 || x < TimelineScroller.Offset.X)
                 TimelineScroller.Offset = new Avalonia.Vector(Math.Max(0, x - TimelineScroller.Viewport.Width * .25), 0);
@@ -42,11 +45,11 @@ public partial class MainWindow : Window
         Opened += async (_, _) => { LoadProjectVideo(); if (DataContext is MainViewModel model) await model.InitializeWorkspaceAsync(); };
         DataContextChanged += (_, _) =>
         {
-            if (attached is not null) { attached.PropertyChanged -= ViewModelChanged; attached.PlaybackRequested -= Play; attached.PauseRequested -= Pause; attached.SeekRequested -= Seek; attached.StopRequested -= Stop; attached.DetachActivity(); }
+            if (attached is not null) { attached.RealtimePlaybackRequested -= PlayRealtimeAsync; attached.RealtimeMixChanged -= UpdateRealtimeAsync; attached.PropertyChanged -= ViewModelChanged; attached.PlaybackRequested -= Play; attached.PauseRequested -= Pause; attached.SeekRequested -= Seek; attached.StopRequested -= Stop; attached.DetachActivity(); }
             attached = DataContext as MainViewModel;
-            if (attached is not null) { attached.PropertyChanged += ViewModelChanged; attached.PlaybackRequested += Play; attached.PauseRequested += Pause; attached.SeekRequested += Seek; attached.StopRequested += Stop; attached.AttachActivity(); if (IsVisible) LoadProjectVideo(); }
+            if (attached is not null) { attached.RealtimePlaybackRequested += PlayRealtimeAsync; attached.RealtimeMixChanged += UpdateRealtimeAsync; attached.PropertyChanged += ViewModelChanged; attached.PlaybackRequested += Play; attached.PauseRequested += Pause; attached.SeekRequested += Seek; attached.StopRequested += Stop; attached.AttachActivity(); if (IsVisible) LoadProjectVideo(); }
         };
-        Closed += (_, _) => { playbackClock.Stop(); attached?.CancelMixUpdate(); attached?.DetachActivity(); attached?.StopAutoSave(); player?.Stop(); player?.Dispose(); player = null; VideoSurface.Dispose(); vlc?.Dispose(); vlc = null; };
+        Closed += (_, _) => { playbackClock.Stop(); ExitRealtime(); attached?.CancelMixUpdate(); attached?.DetachActivity(); attached?.StopAutoSave(); player?.Stop(); player?.Dispose(); player = null; VideoSurface.Dispose(); vlc?.Dispose(); vlc = null; };
         Closing += async (_, args) =>
         {
             if (closingApproved || DataContext is not MainViewModel model) return;
@@ -75,10 +78,11 @@ public partial class MainWindow : Window
         try { attached.PlayVideoCommand.Execute(null); }
         finally { seekLoad = false; }
     }
-    private void Pause() { if (attached is not null) attached.IsPlaybackRunning = false; player?.SetPause(true); }
-    private void Stop() { if (attached is not null) attached.IsPlaybackRunning = false; playbackVersion++; loadingMedia = false; player?.Stop(); playbackPath = null; }
+    private void Pause() { if (attached is not null) attached.IsPlaybackRunning = false; realtimePlayer?.SetPause(true); player?.SetPause(true); }
+    private void Stop() { ExitRealtime(); if (attached is not null) attached.IsPlaybackRunning = false; playbackVersion++; loadingMedia = false; player?.Stop(); playbackPath = null; }
     private void Seek(double seconds)
     {
+        if (realtimeMode && realtimePlayer is not null) { realtimePendingTime = (long)(Math.Max(0, seconds) * 1000); realtimePlayer.Time = realtimePendingTime; }
         if (player is not null && playbackPath is not null && trackTime && seconds >= timelineOffset &&
             (player.Length <= 0 || seconds <= timelineOffset + player.Length / 1000d))
         {
@@ -87,7 +91,8 @@ public partial class MainWindow : Window
         }
         else if (attached is not null) { seekLoad = player?.IsPlaying != true; try { attached.PlayVideoCommand.Execute(null); } finally { seekLoad = false; } }
     }
-    private async void Play(string path, TimeSpan offset)
+    private void Play(string path, TimeSpan offset) { ExitRealtime(); _ = PlayMediaAsync(path, offset); }
+    private async Task PlayMediaAsync(string path, TimeSpan offset)
     {
         int version = ++playbackVersion;
         try
@@ -103,15 +108,15 @@ public partial class MainWindow : Window
                     ConfigurePlaybackAudio();
                     player.Time = pendingTime;
                     if (pauseOnStart) { player.SetPause(true); player.NextFrame(); pauseOnStart = false; }
-                    player.Mute = false;
+                    player.Mute = realtimeMode;
                     if (attached is not null) attached.IsPlaybackRunning = player.IsPlaying;
                 });
                 player.ESAdded += (_, _) => Dispatcher.UIThread.Post(ConfigurePlaybackAudio);
-                player.EndReached += (_, _) => Dispatcher.UIThread.Post(() => { if (attached is not null) attached.IsPlaybackRunning = false; });
+                player.EndReached += (_, _) => Dispatcher.UIThread.Post(() => { if (!realtimeMode && attached is not null) attached.IsPlaybackRunning = false; });
                 player.EncounteredError += (_, _) => Dispatcher.UIThread.Post(() => { if (attached is not null) attached.Status = attached.L["Playback failed. Check the media file and VLC installation."]; });
             }
-            pauseOnStart = seekLoad; pendingTime = (long)offset.TotalMilliseconds; timelineOffset = attached?.PlaybackTimelineOffset ?? 0; trackTime = attached?.TrackPlayback ?? true;
-            player!.Mute = seekLoad;
+            pauseOnStart = seekLoad || realtimeMode; pendingTime = (long)offset.TotalMilliseconds; timelineOffset = attached?.PlaybackTimelineOffset ?? 0; trackTime = attached?.TrackPlayback ?? true;
+            player!.Mute = seekLoad || realtimeMode;
             player.Volume = 100;
             // Source and content-keyed dub previews are immutable; other generated paths may be overwritten.
             if (!loadingMedia && playbackPath == path && (path == attached?.VideoPath || path == attached?.DubPreviewPath)) { player!.Time = pendingTime; player.Play(); return; }
@@ -136,6 +141,7 @@ public partial class MainWindow : Window
     private void ConfigurePlaybackAudio()
     {
         if (player is null) return;
+        if (realtimeMode) { player.Mute = true; return; }
         player.Volume = 100;
         player.Mute = false;
         var tracks = player.AudioTrackDescription.Where(t => t.Id >= 0).ToArray();

@@ -41,6 +41,7 @@ public partial class MainViewModel
     private bool loadingSegment;
     private bool pendingSegmentEdits;
     private bool applyingAutoSave;
+    private SegmentEditorViewModel? loadedEditor;
     public void StopAutoSave() { autoSave?.Cancel(); autoSave?.Dispose(); autoSave = null; }
 
     partial void OnSelectedSegmentChanged(SegmentViewModel? value)
@@ -108,6 +109,7 @@ public partial class MainViewModel
         if (segment is null) return;
         Editor.SourceText = segment.Source.Text; Editor.TranslationText = segment.Translation.Text;
         Editor.ExcludedFromDubbing = segment.ExcludedFromDubbing;
+        Editor.ClipAudioToSlot = segment.ClipAudioToSlot;
         Editor.StartSeconds = segment.Start.TotalSeconds; Editor.EndSeconds = segment.End.TotalSeconds;
         Editor.Speaker = Speakers.FirstOrDefault(s => s.Id == segment.SpeakerId);
         string? engineId = segment.Tts.EngineId ?? Editor.Speaker?.PreferredTtsEngine ?? session.Project.Engines.Tts;
@@ -119,6 +121,7 @@ public partial class MainViewModel
         Editor.AdvancedOptions = JsonSerializer.Serialize(segment.Tts.EngineOptions, new JsonSerializerOptions { WriteIndented = true });
         var speech = segment.FittedSpeech ?? segment.GeneratedSpeech;
         Editor.DurationSummary = speech is null ? "" : $"{speech.Duration.TotalSeconds:F2} / {segment.TargetDuration.TotalSeconds:F2} s · {(speech.Duration.TotalSeconds / segment.TargetDuration.TotalSeconds - 1):+0.0%;-0.0%;0.0%}";
+        loadedEditor = new(); loadedEditor.CopyFrom(Editor);
         }
         finally { loadingSegment = false; pendingSegmentEdits = false; }
     }
@@ -130,6 +133,11 @@ public partial class MainViewModel
         if (session.Project.Source is { } source && Editor.EndSeconds > source.Duration.TotalSeconds + 0.02)
             throw new ArgumentException("Segment end exceeds the video duration.");
         var options = JsonSerializer.Deserialize<Dictionary<string, object?>>(Editor.AdvancedOptions) ?? [];
+        bool placementOnly = loadedEditor is { } old && Editor.SourceText == old.SourceText && Editor.TranslationText == old.TranslationText &&
+            Editor.Speaker?.Id == old.Speaker?.Id && Editor.VoiceEngine?.EngineId == old.VoiceEngine?.EngineId &&
+            Editor.EmotionMode == old.EmotionMode && Editor.EmotionText == old.EmotionText && Editor.Intensity == old.Intensity &&
+            Editor.EmotionReference == old.EmotionReference && Editor.EmotionVector == old.EmotionVector && Editor.Speed == old.Speed &&
+            Editor.Seed == old.Seed && Editor.AdvancedOptions == old.AdvancedOptions;
         bool translationChanged = Editor.TranslationText != previous.Translation.Text;
         var emotion = new EmotionDescriptor { Mode = Editor.EmotionMode, Label = Editor.EmotionMode == EmotionMode.Label ? Editor.EmotionText : null,
             Instruction = Editor.EmotionMode == EmotionMode.Instruction ? Editor.EmotionText : null, Intensity = Editor.Intensity,
@@ -138,14 +146,23 @@ public partial class MainViewModel
         var updated = previous with { Start = TimeSpan.FromSeconds(Editor.StartSeconds), End = TimeSpan.FromSeconds(Editor.EndSeconds), SpeakerId = Editor.Speaker?.Id,
             Source = previous.Source with { Text = Editor.SourceText },
             ExcludedFromDubbing = Editor.ExcludedFromDubbing,
+            ClipAudioToSlot = Editor.ClipAudioToSlot,
             Translation = new(session.Project.Settings.TargetLanguage, Editor.TranslationText, previous.Translation.Locked || translationChanged),
             Emotion = emotion, Tts = previous.Tts with { EngineId = Editor.VoiceEngine?.EngineId,
                 SpeakingRate = Editor.SupportsSpeed ? Editor.Speed : null, Seed = Editor.SupportsSeed && ulong.TryParse(Editor.Seed, out var seed) ? seed : null, EngineOptions = options },
             DirtyStages = previous.DirtyStages.Append(PipelineStage.Tts).Union(StageDependencies.After(PipelineStage.Tts)).ToArray(), Status = SegmentStatus.TtsDirty };
         if (translationChanged) updated = updated with { DirtyStages = updated.DirtyStages.Where(s => s != PipelineStage.Translation).ToArray() };
         if (previous.Source.Text != updated.Source.Text && !updated.Translation.Locked) updated = updated with { DirtyStages = updated.DirtyStages.Append(PipelineStage.Translation).Distinct().ToArray() };
+        if (placementOnly)
+        {
+            bool lengthChanged = updated.TargetDuration != previous.TargetDuration;
+            updated = previous with { Start = updated.Start, End = updated.End, ClipAudioToSlot = Editor.ClipAudioToSlot, ExcludedFromDubbing = Editor.ExcludedFromDubbing,
+                SourceReferenceStart = previous.SourceReferenceStart ?? previous.Start, SourceReferenceEnd = previous.SourceReferenceEnd ?? previous.End,
+                DirtyStages = previous.DirtyStages.Union(lengthChanged ? new[] { PipelineStage.DurationFit, PipelineStage.Mix, PipelineStage.Mux } : new[] { PipelineStage.Mix, PipelineStage.Mux }).ToArray() };
+        }
         Edit(p => p with { Segments = p.Segments.Select(s => s.Id == updated.Id ? updated : s).ToArray() });
         pendingSegmentEdits = false;
+        loadedEditor = new(); loadedEditor.CopyFrom(Editor);
         if (refresh) Refresh();
         else
         {
@@ -184,6 +201,7 @@ public partial class MainViewModel
         if (!await SaveCoreAsync(ct)) return;
         try { await speech.GenerateAsync(session.Project, session.DirectoryPath!, ReportProgress(), ct, id, fitDuration, overwriteExisting: true); }
         finally { await session.OpenAsync(session.DirectoryPath!, CancellationToken.None); Refresh(); }
+        await ResolveCollisionsAsync(ct);
     }
     [RelayCommand] private async Task ReanalyzeAsync() => await RunAsync(async ct =>
     {
@@ -230,12 +248,7 @@ public partial class MainViewModel
     [RelayCommand] private async Task PlayAsync()
     {
         if (IsBusy) return;
-        if (DubPreviewPath is { } path)
-        {
-            PlaybackTimelineOffset = 0; TrackPlayback = true;
-            PlaybackRequested?.Invoke(path, TimeSpan.FromSeconds(Playhead >= VideoDuration ? 0 : Playhead));
-        }
-        else await PlayDubAsync();
+        await PlayDubAsync();
     }
     [RelayCommand] private void PlayVideo() { if (preparingDub) Cancel(); DubPreviewPath = null; PlaybackTimelineOffset = 0; TrackPlayback = true; if (session.Project.Source is { } source) PlaybackRequested?.Invoke(source.Path, TimeSpan.FromSeconds(Playhead)); }
     [RelayCommand] private void Pause() { CancelMixUpdate(); PauseRequested?.Invoke(); }
@@ -243,13 +256,13 @@ public partial class MainViewModel
     {
         if (workspace is null || session.DirectoryPath is not { } directory) return;
         preparingDub = true;
-        StopRequested?.Invoke();
         try
         {
-            string path = await new DubPreviewService(workspace.Media).PrepareAsync(session.Project, directory, ReportProgress(), ct);
+            if (!await ResolveCollisionsAsync(ct)) return;
+            var plan = await PlaybackPlanAsync(ct);
             ct.ThrowIfCancellationRequested();
-            DubPreviewPath = path; PlaybackTimelineOffset = 0; TrackPlayback = true;
-            PlaybackRequested?.Invoke(path, TimeSpan.FromSeconds(Playhead >= VideoDuration ? 0 : Playhead));
+            DubPreviewPath = null; PlaybackTimelineOffset = 0; TrackPlayback = true;
+            if (RealtimePlaybackRequested is not null) await RealtimePlaybackRequested(plan, TimeSpan.FromSeconds(Playhead >= VideoDuration ? 0 : Playhead));
         }
         finally { preparingDub = false; }
     });
@@ -306,6 +319,9 @@ public partial class MainViewModel
             }
             if (session.DirectoryPath is null || !session.IsDirty) return;
             await session.SaveAsync(null, ct); IsDirty = session.IsDirty;
+            if (SegmentCollisions.Find(session.Project) is not null)
+                await RunAsync(async token => { await ResolveCollisionsAsync(token); }, "Review overlaps");
+            if (IsPlaybackRunning) await UpdateRealtimeMixAsync();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Status = L.Format("Operation failed: {0}", ex.Message); }

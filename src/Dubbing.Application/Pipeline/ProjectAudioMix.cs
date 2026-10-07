@@ -11,6 +11,8 @@ public static class ProjectAudioMix
 {
     public static GeneratedSpeech? EffectiveSpeech(DubSegment segment) =>
         segment.DirtyStages.Contains(PipelineStage.DurationFit) ? segment.GeneratedSpeech : segment.FittedSpeech ?? segment.GeneratedSpeech;
+    public static TimeSpan EffectiveDuration(DubSegment segment) => EffectiveSpeech(segment) is { } speech
+        ? segment.ClipAudioToSlot && speech.Duration > segment.TargetDuration ? segment.TargetDuration : speech.Duration : TimeSpan.Zero;
     public static bool IsBackground(string key) => key is "instrumental" or "background" or "music" or "effects" || key.StartsWith("background-", StringComparison.Ordinal);
     public static int Channels(DubbingProject project) => Math.Clamp(Math.Max(project.Source?.AudioChannels ?? 2,
         project.AudioTracks.Where(t => t.Role is AudioTrackRole.Background or AudioTrackRole.Music or AudioTrackRole.Effects).Select(t => t.Channels).DefaultIfEmpty(1).Max()), 1, 8);
@@ -40,14 +42,14 @@ public static class ProjectAudioMix
                     throw new InvalidOperationException($"Segment {number}: settings or text changed. Regenerate speech before exporting.");
                 if (speech.Fingerprint is null || await ContentFingerprint.ComputeAsync(path!, ct) != speech.Fingerprint)
                     throw new InvalidOperationException($"Segment {number}: the WAV was modified outside OpenDub. Regenerate speech before exporting.");
-                if (Math.Abs(speech.Duration.TotalSeconds / segment.TargetDuration.TotalSeconds - 1) > settings.DurationTolerance)
+                if (Math.Abs(EffectiveDuration(segment).TotalSeconds / segment.TargetDuration.TotalSeconds - 1) > settings.DurationTolerance)
                 {
                     string warning = $"Segment {number}: audio {speech.Duration.TotalSeconds:F2} s, time slot {segment.TargetDuration.TotalSeconds:F2} s.";
                     if (!allowDurationMismatch) throw new InvalidOperationException(warning + " Adjust the duration or explicitly allow duration mismatches in Export.");
                     progress?.Report(new(0, warning + " Exporting at its original start; following segments are not moved.", segment.Id));
                 }
             }
-            clips.Add(new(path!, segment.Start, settings.VoiceGain));
+            clips.Add(new(path!, segment.Start, settings.VoiceGain, segment.ClipAudioToSlot ? segment.TargetDuration : null));
         }
         if (audition == AudioAudition.OriginalVoice || audition == AudioAudition.Mix && !settings.OriginalVoiceMuted)
         {

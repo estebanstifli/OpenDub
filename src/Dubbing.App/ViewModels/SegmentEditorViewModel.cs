@@ -7,6 +7,7 @@ namespace Dubbing.App.ViewModels;
 public partial class SegmentEditorViewModel : ObservableObject
 {
     [ObservableProperty] private bool excludedFromDubbing;
+    [ObservableProperty] private bool clipAudioToSlot;
     [ObservableProperty] private string sourceText = "";
     [ObservableProperty] private string translationText = "";
     [ObservableProperty] private double startSeconds;
@@ -26,6 +27,7 @@ public partial class SegmentEditorViewModel : ObservableObject
     {
         VoiceEngine = other.VoiceEngine;
         ExcludedFromDubbing = other.ExcludedFromDubbing;
+        ClipAudioToSlot = other.ClipAudioToSlot;
         SourceText = other.SourceText;
         TranslationText = other.TranslationText;
         StartSeconds = other.StartSeconds;

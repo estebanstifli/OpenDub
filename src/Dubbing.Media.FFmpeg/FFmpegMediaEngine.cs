@@ -81,7 +81,8 @@ public sealed class FFmpegMediaEngine(IProcessRunner runner, IRuntimeLocator loc
         {
             var clip = request.Clips[i];
             long delay = checked((long)Math.Round(clip.Start.TotalSeconds * request.SampleRate));
-            filters.Add($"[{i + 1}:a]aresample={request.SampleRate},aformat=sample_fmts=fltp:channel_layouts={layout},asetpts=PTS-STARTPTS,volume={Number(clip.Gain)},adelay={delay}S:all=1[a{i}]");
+            string trim = clip.Limit is { } limit ? $"atrim=duration={Seconds(limit)}," : "";
+            filters.Add($"[{i + 1}:a]{trim}aresample={request.SampleRate},aformat=sample_fmts=fltp:channel_layouts={layout},asetpts=PTS-STARTPTS,volume={Number(clip.Gain)},adelay={delay}S:all=1[a{i}]");
             labels += $"[a{i}]";
         }
         string limiter = request.ProtectPeaks ? ",alimiter=limit=0.95:level=false:latency=true" : "";

@@ -207,6 +207,12 @@ public sealed class MediaPipelineTests : IDisposable
         string cut = Path.Combine(directory, "cut.wav");
         await Media.CutAsync(mix, cut, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(0.25), CancellationToken.None);
         Assert.InRange((await Media.ProbeAsync(cut, CancellationToken.None)).Duration.TotalSeconds, 0.249, 0.251);
+        string limited = Path.Combine(directory, "limited.wav");
+        await Media.MixAsync(new([new(a, TimeSpan.FromSeconds(1), Limit: TimeSpan.FromSeconds(.2))], limited,
+            TimeSpan.FromSeconds(2), 16000, 1), null, CancellationToken.None);
+        using var pcm = new Dubbing.Application.Playback.PcmWaveSource(limited);
+        Assert.Contains(Enumerable.Range(16800, 800), i => Math.Abs(pcm.Sample(i, 0)) > .01);
+        Assert.All(Enumerable.Range(20800, 800), i => Assert.InRange(Math.Abs(pcm.Sample(i, 0)), 0, .0001));
     }
 
     [FFmpegFact]

@@ -312,5 +312,17 @@
   "Allow duration mismatches (speech may overlap)": "Allow duration mismatches (speech may overlap)",
   "Keeps each WAV at its segment start without moving later segments or cutting speech. Short clips leave silence; long clips may overlap. Missing, outdated or externally modified audio still blocks export.": "Keeps each WAV at its segment start without moving later segments or cutting speech. Short clips leave silence; long clips may overlap. Missing, outdated or externally modified audio still blocks export.",
   "Media processing complete.": "Media processing complete.",
-  "Generate or regenerate before exporting: {0}": "Generate or regenerate before exporting: {0}"
+  "Generate or regenerate before exporting: {0}": "Generate or regenerate before exporting: {0}",
+  "Overlapping dialogue": "Overlapping dialogue",
+  "Segment {0} reaches segment {1}.": "Segment {0} reaches segment {1}.",
+  "Do not overlap trims excess audio at the boundary; this may cut speech. Merge joins both texts and regenerates speech using the first speaker. Keep overlap plays both voices together.": "Do not overlap trims excess audio at the boundary; this may cut speech. Merge joins both texts and regenerates speech using the first speaker. Keep overlap plays both voices together.",
+  "Apply to remaining overlaps (limit or keep only)": "Apply to remaining overlaps (limit or keep only)",
+  "Do not overlap": "Do not overlap",
+  "Merge segments": "Merge segments",
+  "Keep overlap": "Keep overlap",
+  "Limit audio to segment end (cuts excess speech)": "Limit audio to segment end (cuts excess speech)",
+  "Segments merged. Complete the translation, then generate speech.": "Segments merged. Complete the translation, then generate speech.",
+  "Generating the merged dialogue…": "Generating the merged dialogue…",
+  "Realtime audio playback failed. Check the active WAV files.": "Realtime audio playback failed. Check the active WAV files.",
+  "Review overlaps": "Review overlaps"
 }

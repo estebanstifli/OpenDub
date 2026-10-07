@@ -17,7 +17,7 @@ public sealed class DubPreviewService(IMediaEngine media)
         foreach (var clip in clips)
         {
             string fingerprint = await ContentFingerprint.ComputeAsync(clip.Path, ct);
-            inputs.Add(new { clip.Path, clip.Start, clip.Gain, fingerprint });
+            inputs.Add(new { clip.Path, clip.Start, clip.Gain, clip.Limit, fingerprint });
         }
         progress?.Report(new(0, $"Dub preview: {clips.Count} audio sources; mix mode {audition}."));
         var sourceFile = new FileInfo(source.Path);

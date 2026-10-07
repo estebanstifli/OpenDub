@@ -6,7 +6,7 @@ public sealed record MediaStreamInfo(int Index, string Type, string Codec, int? 
     int? SampleRate = null, string? ChannelLayout = null, string? FrameRate = null, string? TimeBase = null,
     string? Language = null, string? Title = null, bool IsDefault = false);
 public sealed record MediaInfo(TimeSpan Duration, IReadOnlyList<MediaStreamInfo> Streams);
-public sealed record AudioClip(string Path, TimeSpan Start, double Gain = 1);
+public sealed record AudioClip(string Path, TimeSpan Start, double Gain = 1, TimeSpan? Limit = null);
 public sealed record MixRequest(IReadOnlyList<AudioClip> Clips, string OutputPath, TimeSpan Duration,
     int SampleRate = 48000, int Channels = 2, bool ProtectPeaks = true);
 

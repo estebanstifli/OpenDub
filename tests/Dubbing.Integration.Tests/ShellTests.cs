@@ -32,6 +32,65 @@ public static class TestAppBuilder
 public sealed class ShellTests
 {
     [AvaloniaFact]
+    public async Task OverlapDialogUsesVisibleOwnerAndRequiresExplicitDecision()
+    {
+        var owner = new Window(); owner.Show();
+        var parent = new Window(); var parentTask = parent.ShowDialog(owner);
+        try
+        {
+            var dialogs = new ProjectDialogs(owner);
+            var a = new DubSegment { End = TimeSpan.FromSeconds(3) };
+            var b = new DubSegment { End = TimeSpan.FromSeconds(2) };
+            var collision = SegmentCollisions.Find(new() { Segments = [a, b] })!;
+            var pending = dialogs.ResolveCollisionAsync(collision);
+            var dialog = parent.OwnedWindows.Single(); dialog.UpdateLayout();
+            Assert.Same(parent, dialog.Owner);
+            Assert.False(dialog.GetVisualDescendants().OfType<Button>().Single(b => b.Tag as string == "Do not overlap").IsEnabled);
+            dialog.Close(); Assert.Equal(CollisionChoice.Cancel, (await pending).Choice);
+            pending = dialogs.ResolveCollisionAsync(collision);
+            dialog = parent.OwnedWindows.Single(); dialog.UpdateLayout();
+            dialog.GetVisualDescendants().OfType<Button>().Single(b => b.Tag as string == "Merge segments")
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(CollisionChoice.Merge, (await pending).Choice);
+        }
+        finally { parent.Close(); owner.Close(); await parentTask; }
+    }
+
+    [AvaloniaFact]
+    public async Task PlacementEditsRetainSpeechAndMergeRegeneratesOnlyJoinedSegments()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "placement-" + Guid.NewGuid());
+        var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
+        var registry = new EngineRegistry(MockEngineCatalog.Create()); var factory = new ProjectFactory(registry);
+        var session = new ProjectSession(store);
+        var dialogs = new FakeDialogs(directory) { Collision = CollisionChoice.Merge };
+        var media = new FFmpegMediaEngine(new ProcessRunner(NullLogger<ProcessRunner>.Instance), new RuntimeLocator(), new());
+        var vm = new MainViewModel(session, factory, registry, dialogs, new TimelineBuilder(), new TranslationService(registry), NullLogger<MainViewModel>.Instance,
+            new ImportVideoService(media, store, registry, new TimelineBuilder()), new GenerateSpeechService(new EngineSelectionService(registry), store),
+            new ExportVideoService(media, new DubRenderService(media), store));
+        var a = new DubSegment { End = TimeSpan.FromSeconds(2), Source = new("en", "Hello"), Translation = new("es", "Hola"), GeneratedSpeech = new("a.wav", TimeSpan.FromSeconds(2), "a", "a"), DirtyStages = [] };
+        var b = new DubSegment { Start = TimeSpan.FromSeconds(2), End = TimeSpan.FromSeconds(4), Source = new("en", "world"), Translation = new("es", "mundo"), DirtyStages = [] };
+        var c = new DubSegment { Start = TimeSpan.FromSeconds(10), End = TimeSpan.FromSeconds(12), Source = new("en", "Later"), Translation = new("es", "Luego"), DirtyStages = [] };
+        try
+        {
+            await store.SaveAsync(factory.Create() with { Segments = [a,b,c] }, directory, default);
+            await vm.OpenCommand.ExecuteAsync(null); vm.SelectedSegment = vm.Segments[0];
+            vm.Editor.StartSeconds = .25; vm.Editor.EndSeconds = 2.25;
+            await vm.ApplySegmentCommand.ExecuteAsync(null); vm.StopAutoSave();
+            var moved = session.Project.Segments[0];
+            Assert.Equal(a.GeneratedSpeech, moved.GeneratedSpeech);
+            Assert.DoesNotContain(Dubbing.Core.Pipeline.PipelineStage.Tts, moved.DirtyStages);
+            Assert.Equal(a.Start, moved.SourceReferenceStart); Assert.Equal(a.End, moved.SourceReferenceEnd);
+            var resolve = typeof(MainViewModel).GetMethod("ResolveCollisionsAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            Assert.True(await (Task<bool>)resolve.Invoke(vm, [CancellationToken.None])!);
+            Assert.Equal(2, session.Project.Segments.Count);
+            Assert.Equal("Hola mundo", session.Project.Segments[0].Translation.Text);
+            Assert.True(File.Exists(Path.Combine(directory, session.Project.Segments[0].GeneratedSpeech!.File)));
+            Assert.Equal(c.Id, session.Project.Segments[1].Id); Assert.Null(session.Project.Segments[1].GeneratedSpeech);
+        }
+        finally { vm.StopAutoSave(); if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+    [AvaloniaFact]
     public async Task FirstRunAssistantCanBeCancelledBeforeDownloading()
     {
         string root = Path.Combine(Path.GetTempPath(), "opendub-setup-" + Guid.NewGuid());
@@ -503,7 +562,7 @@ public sealed class ShellTests
             Assert.Equal(4.6, vm.Playhead); Assert.Equal(0, seeks);
             int pauses = 0; vm.PauseRequested += () => pauses++;
             vm.OriginalVoiceMuted = false; vm.DubMuted = true; vm.OriginalVoiceGain = .7;
-            Assert.Equal(3, pauses);
+            Assert.Equal(0, pauses); // Live mixer controls no longer pause or rebuild the film.
             Assert.Equal(4.6, vm.Playhead);
             Assert.False(session.Project.Settings.OriginalVoiceMuted);
             Assert.True(session.Project.Settings.DubMuted);
@@ -585,6 +644,8 @@ public sealed class ShellTests
 
     private sealed class FakeDialogs(string directory) : IProjectDialogs
     {
+        public CollisionChoice Collision { get; set; } = CollisionChoice.Cancel;
+        public Task<CollisionDecision> ResolveCollisionAsync(SegmentCollision collision) => Task.FromResult(new CollisionDecision(Collision));
         public UnsavedChoice Choice { get; set; } = UnsavedChoice.Discard;
         public Task<UnsavedChoice> ConfirmUnsavedAsync() => Task.FromResult(Choice);
         public Task<string?> NewProjectDirectoryAsync(string name) => Task.FromResult<string?>(directory);

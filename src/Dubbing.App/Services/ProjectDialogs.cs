@@ -11,6 +11,8 @@ public enum UnsavedChoice { Save, Discard, Cancel }
 public sealed record AudioTrackChoice(IReadOnlyList<SourceAudioTrack> Tracks, int AnalysisIndex, bool Separate);
 public interface IProjectDialogs
 {
+    Task<Dubbing.Application.Projects.CollisionDecision> ResolveCollisionAsync(Dubbing.Application.Projects.SegmentCollision collision)
+        => Task.FromResult(new Dubbing.Application.Projects.CollisionDecision(Dubbing.Application.Projects.CollisionChoice.Cancel));
     Task<(double Start, double End)?> EditVoiceReferenceAsync(IReadOnlyList<float> peaks, double windowStart, double windowEnd,
         double start, double end, Func<double, double, Task> preview, Action stop) => Task.FromResult<(double, double)?>(null);
     Task<bool> EditSegmentAsync(Dubbing.App.ViewModels.SegmentDetailViewModel model) => Task.FromResult(false);
@@ -35,7 +37,8 @@ public sealed partial class ProjectDialogs(Window owner, TextCatalog? text = nul
     public Task<bool> EditSegmentAsync(Dubbing.App.ViewModels.SegmentDetailViewModel model) => ShowDialogAsync<bool>(new Dubbing.App.SegmentDetailWindow(model, text));
     private async Task<T> ShowDialogAsync<T>(Window dialog)
     {
-        try { return await dialog.ShowDialog<T>(owner); }
+        var parent = owner.OwnedWindows.LastOrDefault(w => w.IsVisible) ?? owner;
+        try { return await dialog.ShowDialog<T>(parent); }
         finally
         {
             // Avalonia completes ShowDialog during Closed, before detaching Owner.

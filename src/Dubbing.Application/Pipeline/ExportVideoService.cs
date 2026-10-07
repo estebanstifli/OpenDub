@@ -52,7 +52,7 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         project = project with
         {
             Segments = project.Segments.Select(s => s.ExcludedFromDubbing || project.Settings.DubMuted ||
-                Math.Abs(ProjectAudioMix.EffectiveSpeech(s)!.Duration.TotalSeconds / s.TargetDuration.TotalSeconds - 1) > project.Settings.DurationTolerance ? s : s with { Status = SegmentStatus.Ready,
+                Math.Abs(ProjectAudioMix.EffectiveDuration(s).TotalSeconds / s.TargetDuration.TotalSeconds - 1) > project.Settings.DurationTolerance ? s : s with { Status = SegmentStatus.Ready,
                 DirtyStages = s.DirtyStages.Except([PipelineStage.DurationFit, PipelineStage.Mix, PipelineStage.Mux]).ToArray() }).ToArray()
         };
         await File.WriteAllTextAsync(Path.Combine(destination, "render-metadata.json"), System.Text.Json.JsonSerializer.Serialize(new

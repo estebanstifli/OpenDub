@@ -19,33 +19,17 @@ public partial class MainViewModel
     public string OriginalTrackName => L[session.Project.Stems.ContainsKey("vocals") ? "Original dialogue" : "Original audio (full mix)"];
     public string DubTrackName => L[session.Project.Segments.Any(s => !s.ExcludedFromDubbing && (s.GeneratedSpeech is not null || s.FittedSpeech is not null)) ? "Dubbed dialogue" : "Dubbed dialogue (not generated)"];
     public bool IsPlaybackRunning { get; set; }
-    private CancellationTokenSource? mixUpdate;
-    private bool resumeMix;
     public string OriginalSpeakerIcon => OriginalVoiceMuted ? "volume-x" : "volume-2";
     public string DubSpeakerIcon => DubMuted ? "volume-x" : "volume-2";
     public string BackgroundSpeakerIcon => BackgroundMuted ? "volume-x" : "volume-2";
-    public void CancelMixUpdate() { mixUpdate?.Cancel(); resumeMix = false; }
-    private async Task ResumeMixAsync(CancellationToken ct)
-    {
-        try
-        {
-            await Task.Delay(400, ct);
-            ct.ThrowIfCancellationRequested();
-            if (resumeMix) { resumeMix = false; await PlayAsync(); }
-        }
-        catch (OperationCanceledException) { }
-    }
+    public void CancelMixUpdate() => realtimeMixVersion++;
 
     private void ChangeMix(Func<ProjectSettings, ProjectSettings> change)
     {
         if (refreshing) return;
-        resumeMix |= IsPlaybackRunning;
-        mixUpdate?.Cancel(); mixUpdate?.Dispose(); mixUpdate = new();
-        PauseRequested?.Invoke();
         DubPreviewPath = null;
         Edit(p => p with { Settings = change(p.Settings), Segments = MixDirty(p) });
-        Status = L["Mix changed. Press Play to hear it from the current position."];
-        if (resumeMix) _ = ResumeMixAsync(mixUpdate.Token);
+        _ = UpdateRealtimeMixAsync();
     }
     private static IReadOnlyList<DubSegment> MixDirty(DubbingProject p) => p.Segments.Select(s => s with
         { DirtyStages = s.DirtyStages.Union([PipelineStage.Mix, PipelineStage.Mux]).Order().ToArray() }).ToArray();
@@ -129,10 +113,11 @@ public partial class MainViewModel
         StopRequested?.Invoke();
         try
         {
-            var path = await new DubPreviewService(workspace.Media).PrepareAsync(session.Project, directory, ReportProgress(), ct, audition);
+            if (!await ResolveCollisionsAsync(ct)) return;
+            var plan = await PlaybackPlanAsync(ct, audition);
             ct.ThrowIfCancellationRequested();
             DubPreviewPath = null; TrackPlayback = true; PlaybackTimelineOffset = 0;
-            PlaybackRequested?.Invoke(path, TimeSpan.FromSeconds(Playhead >= VideoDuration ? 0 : Playhead));
+            if (RealtimePlaybackRequested is not null) await RealtimePlaybackRequested(plan, TimeSpan.FromSeconds(Playhead >= VideoDuration ? 0 : Playhead));
         }
         finally { preparingDub = false; }
     });

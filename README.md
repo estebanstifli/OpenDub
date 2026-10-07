@@ -16,7 +16,9 @@ The **Prepare OpenDub** assistant downloads the six pinned models sequentially (
 
 Use **Auto dub** for video → analysis → translation → speech and fitting → export. Choose languages, dialogue track and export folder, then Start. Checkpoints are saved: fix reported segments in Studio and run Auto dub again to resume. With a project open, Auto dub resumes it. Import another video to start another job. It uses the project engines, defaults to llama.cpp and Qwen3 4B, and exports generated dialogue with available background.
 
-For manual work: Import video, review Studio/Segments, Translate, Generate speech, Export. Translation and speech support All or ranges such as `3-5,9,12-15`. Overwrite explicitly replaces results, including manual translations. Inspector changes save after a short pause; invalid times are not saved. Regenerate speech after changing text, timing or speaker settings.
+For manual work: Import video, review Studio/Segments, Translate, Generate speech, Export. Translation and speech support All or ranges such as `3-5,9,12-15`. Overwrite explicitly replaces results, including manual translations. Inspector changes save after a short pause; invalid times are not saved. Regenerate speech after changing text or speaker settings. Moving a clip preserves its audio; changing its length invalidates duration fitting without synthesizing new speech.
+
+**Play** mixes individual WAVs in small PCM blocks while showing the original video muted. Regenerating a segment does not rebuild a movie-length preview. Mute and volume apply during playback. Overlapping dialogue prompts to limit excess audio (which can cut speech), merge texts and regenerate the combined voice, or keep both voices. Following segments never shift automatically.
 
 **Settings** contains language, folders, source copying, defaults and setup. **Advanced** provides engine/model management, backend selection, paths, diagnostics and tuning. Translation supports auto/cpu/cuda/metal, subject to runtime and hardware availability.
 

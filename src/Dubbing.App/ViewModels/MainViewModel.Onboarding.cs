@@ -99,13 +99,14 @@ public partial class MainViewModel
     private async Task ExportWithDialogAsync(CancellationToken ct)
     {
         if (session.Project.Source is null) throw new InvalidOperationException("Import a video before exporting.");
+        if (!await ResolveCollisionsAsync(ct)) return;
         if (!await SaveCoreAsync(ct)) return;
         string directory = session.DirectoryPath!;
         string destination = Path.Combine(directory, "exports", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         string profile = Settings.DefaultExportProfile; bool original = false, subtitles = true, allowMismatch = false;
         var mismatches = session.Project.Segments.Select((s, i) => (Segment: s, Number: i + 1))
             .Where(x => !x.Segment.ExcludedFromDubbing && ProjectAudioMix.EffectiveSpeech(x.Segment) is { } audio &&
-                Math.Abs(audio.Duration.TotalSeconds / x.Segment.TargetDuration.TotalSeconds - 1) > session.Project.Settings.DurationTolerance).ToArray();
+                Math.Abs(ProjectAudioMix.EffectiveDuration(x.Segment).TotalSeconds / x.Segment.TargetDuration.TotalSeconds - 1) > session.Project.Settings.DurationTolerance).ToArray();
         var pendingSegments = session.Project.Segments.Select((s, i) => (Segment: s, Number: i + 1))
             .Where(x => !x.Segment.ExcludedFromDubbing && (ProjectAudioMix.EffectiveSpeech(x.Segment) is null ||
                 x.Segment.DirtyStages.Any(stage => stage is not Dubbing.Core.Pipeline.PipelineStage.Mix and not Dubbing.Core.Pipeline.PipelineStage.Mux and not Dubbing.Core.Pipeline.PipelineStage.DurationFit)))

@@ -30,6 +30,9 @@ public sealed record GeneratedSpeech(string File, TimeSpan Duration, string Cach
 public sealed record JobMetric(string Stage, double WallSeconds, double? AudioSeconds = null, string? SegmentId = null, int Retries = 0);
 public sealed record DubSegment
 {
+    public bool ClipAudioToSlot { get; init; }
+    public TimeSpan? SourceReferenceStart { get; init; }
+    public TimeSpan? SourceReferenceEnd { get; init; }
     public bool ExcludedFromDubbing { get; init; }
     public string? ExclusionReason { get; init; }
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
@@ -106,6 +109,7 @@ public sealed record SourceAudioTrack(int Index, string Codec, int Channels, int
     AudioTrackRole Role = AudioTrackRole.Ignore);
 public sealed record DubbingProject
 {
+    public IReadOnlyList<string> AcceptedOverlaps { get; init; } = [];
     public IReadOnlyList<SourceAudioTrack> AudioTracks { get; init; } = [];
     public AudioReference? SelectedSourceAudio { get; init; }
     public AudioReference? AnalysisAudio { get; init; }

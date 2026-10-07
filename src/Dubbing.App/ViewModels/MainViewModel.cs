@@ -248,6 +248,7 @@ public partial class MainViewModel : ObservableObject
             try { await speech.GenerateAsync(session.Project, directory, ReportProgress(), ct, null, options.FitDuration, SelectedIds(options), options.OverwriteExisting); }
             finally { await session.OpenAsync(directory, CancellationToken.None); Refresh(); }
             Status = L["Speech generated. Review the timing before exporting."];
+            await ResolveCollisionsAsync(ct);
         }, () => operation?.Cancel());
     });
 

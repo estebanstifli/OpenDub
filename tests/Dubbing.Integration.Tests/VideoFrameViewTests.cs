@@ -10,6 +10,56 @@ namespace Dubbing.Integration.Tests;
 
 public sealed class VideoFrameViewTests
 {
+    [RuntimeFact] public async Task RealtimePlayerKeepsVideoMutedAndSupportsSeekPauseResume()
+    {
+        var session = Avalonia.Headless.HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        await session.Dispatch(async () =>
+        {
+            string root = Path.Combine(Path.GetTempPath(), "realtime-video-" + Guid.NewGuid()); Directory.CreateDirectory(root);
+            string video = Path.Combine(root, "source.mp4"), voice = Path.Combine(root, "voice.wav");
+            var runner = new ProcessRunner(NullLogger<ProcessRunner>.Instance);
+            var result = await runner.RunAsync(new(Environment.GetEnvironmentVariable("DUBBING_FFMPEG")!,
+                ["-y", "-f", "lavfi", "-i", "testsrc2=s=128x72:r=20:d=12", "-f", "lavfi", "-i", "sine=frequency=600:duration=12", "-c:v", "libx264", "-c:a", "aac", "-shortest", video]), default);
+            Assert.Equal(0, result.ExitCode);
+            await new Dubbing.Engines.Mock.MockTtsEngine().SynthesizeAsync(new() { Text = "test", Language = "en", OutputPath = voice, TargetDuration = TimeSpan.FromSeconds(12) }, null, default);
+            var plan = new Dubbing.Application.Playback.RealtimePlaybackPlan(video, TimeSpan.FromSeconds(12), [new(voice, TimeSpan.Zero, Limit: TimeSpan.FromSeconds(12))]);
+            var window = new Dubbing.App.MainWindow(); window.Show();
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            object? Field(string name) => typeof(Dubbing.App.MainWindow).GetField(name, flags)!.GetValue(window);
+            object? Call(string name, params object[] args) => typeof(Dubbing.App.MainWindow).GetMethod(name, flags)!.Invoke(window, args);
+            try
+            {
+                await (Task)Call("PlayRealtimeAsync", plan, TimeSpan.FromSeconds(1))!;
+                var audio = Assert.IsType<MediaPlayer>(Field("realtimePlayer"));
+                var player = Assert.IsType<MediaPlayer>(Field("player"));
+                await WaitFor(() => audio.Time > 1500 && player.IsPlaying);
+                Assert.True(player.Mute);
+                Assert.NotNull(window.FindControl<VideoFrameView>("VideoSurface")!.Source);
+                Call("Pause"); await WaitFor(() => audio.State == VLCState.Paused && player.State == VLCState.Paused);
+                Call("Seek", 6d); await WaitFor(() => audio.Time >= 5900);
+                await (Task)Call("PlayRealtimeAsync", plan, TimeSpan.FromSeconds(6))!;
+                await WaitFor(() => audio.Time > 6500 && player.Time > 6200);
+                Call("SynchronizeVideo"); await Task.Delay(250);
+                Assert.True(Math.Abs(audio.Time - player.Time) < 600, $"audio={audio.Time}, video={player.Time}");
+                Assert.True(player.Mute);
+                await (Task)Call("UpdateRealtimeAsync", plan with { Clips = [] })!;
+                Assert.True(audio.IsPlaying);
+                Call("Seek", 11.6d);
+                await WaitFor(() => audio.State == VLCState.Ended);
+                await (Task)Call("PlayRealtimeAsync", plan, TimeSpan.FromSeconds(1))!;
+                await WaitFor(() => audio.IsPlaying && audio.Time > 1400 && audio.Time < 5000);
+                Assert.True(player.Mute);
+                Call("Stop"); Assert.Null(Field("realtimePlayer"));
+            }
+            finally { window.Close(); Directory.Delete(root, true); }
+            return true;
+        }, default);
+        static async Task WaitFor(Func<bool> condition)
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (!condition()) await Task.Delay(20, timeout.Token);
+        }
+    }
     [RuntimeFact] public async Task StudioPlayerDecodesAudibleAudioAfterMediaSwitch()
     {
         var session = Avalonia.Headless.HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);

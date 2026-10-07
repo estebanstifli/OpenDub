@@ -168,8 +168,10 @@ public sealed class GenerateSpeechService(EngineSelectionService selection, IPro
     public static AudioReference SourceReference(DubbingProject project, DubSegment segment, string path)
     {
         double duration = project.Source?.Duration.TotalSeconds ?? segment.End.TotalSeconds;
-        double length = Math.Min(duration, Math.Max(segment.TargetDuration.TotalSeconds < 1 ? 1.2 : 1, segment.TargetDuration.TotalSeconds));
-        double start = Math.Clamp((segment.Start.TotalSeconds + segment.End.TotalSeconds - length) / 2, 0, Math.Max(0, duration - length));
+        double referenceStart = (segment.SourceReferenceStart ?? segment.Start).TotalSeconds, referenceEnd = (segment.SourceReferenceEnd ?? segment.End).TotalSeconds;
+        double referenceLength = referenceEnd - referenceStart;
+        double length = Math.Min(duration, Math.Max(referenceLength < 1 ? 1.2 : 1, referenceLength));
+        double start = Math.Clamp((referenceStart + referenceEnd - length) / 2, 0, Math.Max(0, duration - length));
         return new(path, Start: TimeSpan.FromSeconds(start), End: TimeSpan.FromSeconds(start + length));
     }
 }
