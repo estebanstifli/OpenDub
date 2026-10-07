@@ -6,7 +6,7 @@ runtimes/versions.json pins inference tools and FFmpeg by size/SHA-256. VLC come
 
 Windows portable mode stores configuration/models in data/ and projects alongside. Linux/macOS use user storage, or OPENDUB_PORTABLE_DIR for external portable storage. Do not write into signed app bundles or read-only AppImage mounts.
 
-Linux packaging needs libvlc-dev, vlc-plugin-base, vlc-plugin-video-output, libfuse2, patchelf and desktop libraries; CI installs them. AppRun configures bundled VLC and library paths. Host GPU drivers and compatible glibc remain necessary. Development tarballs may require system VLC.
+Linux packaging targets Ubuntu 24.04 and needs libvlc-dev, vlc-plugin-base, vlc-plugin-video-output, libfuse2t64, patchelf and desktop libraries; CI installs them. The pinned audio runtime requires glibc 2.38 or newer. AppRun configures bundled VLC and library paths; each inference subprocess prefers its own adjacent ggml libraries to avoid ABI collisions. Host GPU drivers and compatible glibc remain necessary. Development tarballs may require system VLC.
 
 macOS bundles VLC.app under Contents/Frameworks. OPENDUB_SIGN_IDENTITY optionally specifies an installed Developer ID; OPENDUB_NOTARY_PROFILE names an existing notarytool keychain profile. Without them output is an unsigned private preview. Public signing needs clean-Mac validation.
 
