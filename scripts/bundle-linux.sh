@@ -6,6 +6,8 @@ cache="$root/artifacts/downloads"
 appdir="$package.AppDir"
 mkdir -p "$cache" "$appdir/usr/lib/opendub" "$appdir/usr/bin" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/scalable/apps"
 cp -a "$package/." "$appdir/usr/lib/opendub/"
+# Optional .NET LTTng tracing provider depends on an obsolete host ABI; EventPipe and normal execution do not need it.
+rm -f -- "$appdir/usr/lib/opendub/libcoreclrtraceptprovider.so"
 mkdir -p "$appdir/usr/lib/vlc"
 cp -L /usr/lib/x86_64-linux-gnu/libvlc.so.5 /usr/lib/x86_64-linux-gnu/libvlccore.so.9 "$appdir/usr/lib/"
 cp -a /usr/lib/x86_64-linux-gnu/vlc/plugins "$appdir/usr/lib/vlc/"

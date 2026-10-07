@@ -86,7 +86,7 @@ public sealed class LlamaCppTranslationEngine(SettingsStore settings, IRuntimeLo
                 var devices = await runner.RunAsync(new(candidate, ["--list-devices"], TimeSpan.FromSeconds(20)), ct);
                 string output = devices.StandardOutput + devices.StandardError;
                 ActivityJournal.Write("llama.cpp · devices: " + output.Trim());
-                if (devices.ExitCode == 0 && System.Text.RegularExpressions.Regex.IsMatch(output, @"(?m)^\s*CUDA\d+:", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                if (mode != "metal" && devices.ExitCode == 0 && System.Text.RegularExpressions.Regex.IsMatch(output, @"(?m)^\s*CUDA\d+:", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                 { runtimeKey = key; return runtime = (candidate, true, false); }
                 if (devices.ExitCode == 0 && mode is "auto" or "metal" && System.Text.RegularExpressions.Regex.IsMatch(output, @"(?im)^\s*Metal\w*:"))
                 { runtimeKey = key; return runtime = (candidate, false, true); }

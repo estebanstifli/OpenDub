@@ -94,9 +94,7 @@ public partial class MainWindow : Window
         {
             if (vlc is null)
             {
-                string macVlc = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Frameworks", "VLC.app", "Contents", "MacOS", "lib"));
-                if (!Directory.Exists(macVlc)) macVlc = "/Applications/VLC.app/Contents/MacOS/lib";
-                LibVLCSharp.Shared.Core.Initialize(OperatingSystem.IsMacOS() && Directory.Exists(macVlc) ? macVlc : null);
+                LibVLCSharp.Shared.Core.Initialize(Services.PackageSelfCheck.VlcDirectory());
                 vlc = new LibVLC("--no-video-title-show", "--vout=vmem", "--avcodec-hw=none"); player = new MediaPlayer(vlc);
                 VideoSurface.Attach(player);
                 player.Playing += (_, _) => Dispatcher.UIThread.Post(() =>

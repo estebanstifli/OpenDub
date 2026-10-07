@@ -10,6 +10,16 @@ public partial class MainViewModel
 {
     [ObservableProperty] private bool sidebarExpanded = true;
     [ObservableProperty] private int navigationIndex;
+    [ObservableProperty] private int sidebarNavigationIndex;
+    private bool syncingNavigation;
+    partial void OnNavigationIndexChanged(int value)
+    {
+        syncingNavigation = true;
+        try { SidebarNavigationIndex = Math.Min(3, value); }
+        finally { syncingNavigation = false; }
+    }
+    partial void OnSidebarNavigationIndexChanged(int value)
+    { if (!syncingNavigation && value >= 0) NavigationIndex = value == 3 ? 5 : value; }
     [ObservableProperty] private double timelineZoom = 1;
     [ObservableProperty] private double timelineViewportWidth = 950;
     [ObservableProperty] private bool followActivity = true;

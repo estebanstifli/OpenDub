@@ -31,6 +31,39 @@ public static class TestAppBuilder
 
 public sealed class ShellTests
 {
+    [AvaloniaFact]
+    public async Task FirstRunAssistantCanBeCancelledBeforeDownloading()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "opendub-setup-" + Guid.NewGuid());
+        var owner = new Window();
+        var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
+        var registry = new EngineRegistry(MockEngineCatalog.Create());
+        var session = new ProjectSession(store);
+        using var coordinator = new RuntimeCoordinator();
+        var runner = new ProcessRunner(NullLogger<ProcessRunner>.Instance); var locator = new RuntimeLocator();
+        var media = new FFmpegMediaEngine(runner, locator, new());
+        var settings = new Dubbing.Infrastructure.Configuration.SettingsStore(Path.Combine(root, "settings.json"));
+        var catalog = new Dubbing.Infrastructure.Models.ModelCatalog(Path.Combine(AppContext.BaseDirectory, "engine-catalog"));
+        using var models = new Dubbing.Infrastructure.Models.VerifiedModelManager(catalog, settings, runner);
+        var workspace = new WorkspaceServices(media, settings, catalog, models, locator, runner, coordinator);
+        var vm = new MainViewModel(session, new ProjectFactory(registry), registry, new ProjectDialogs(owner),
+            new TimelineBuilder(), new TranslationService(registry), NullLogger<MainViewModel>.Instance,
+            new ImportVideoService(media, store, registry, new TimelineBuilder()), new GenerateSpeechService(new EngineSelectionService(registry), store),
+            new ExportVideoService(media, new DubRenderService(media), store), workspace);
+        owner.DataContext = vm; owner.Show();
+        try
+        {
+            var pending = vm.SetupCommand.ExecuteAsync(null);
+            var dialog = owner.OwnedWindows.Single(); dialog.UpdateLayout();
+            Assert.Equal("Prepare OpenDub", dialog.Title);
+            if (Environment.GetEnvironmentVariable("OPENDUB_SETUP_SCREENSHOT") is { Length: > 0 } screenshot)
+            { using var frame = dialog.CaptureRenderedFrame(); Assert.NotNull(frame); frame.Save(screenshot); }
+            dialog.Close(); await pending;
+            Assert.False(File.Exists(settings.FilePath)); Assert.False(vm.IsBusy);
+        }
+        finally { vm.StopAutoSave(); owner.Close(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
     [Fact] public async Task OperationSettingsRestoreWithoutChangingSavedDefaults()
     {
         string root = Path.Combine(Path.GetTempPath(), "operation-settings-" + Guid.NewGuid());
@@ -371,6 +404,11 @@ public sealed class ShellTests
         {
             window.Show();
             Assert.Contains("OpenDub", window.Title);
+            var navigation = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Classes.Contains("nav"));
+            Assert.Equal(4, navigation.Items.Count);
+            vm.SidebarNavigationIndex = 3; Assert.Equal(5, vm.NavigationIndex);
+            vm.NavigationIndex = 3; Assert.Equal(3, vm.SidebarNavigationIndex);
+            vm.SidebarNavigationIndex = 0; Assert.Equal(0, vm.NavigationIndex);
             Assert.Equal(new[] { "zh", "en", "ja", "es", "ar" }, vm.OutputLanguages);
             Assert.False(vm.GenerateCommand.CanExecute(null)); Assert.False(vm.TranslateCommand.CanExecute(null));
             Assert.Equal(6, vm.Engines.Count);
