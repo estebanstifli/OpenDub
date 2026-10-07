@@ -1,6 +1,11 @@
 name: Package OpenDub
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options: [all, linux, macos, windows]
+        default: all
   push:
     tags: ['v*']
 permissions:
@@ -10,13 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            rid: win-x64
-          - os: ubuntu-22.04
-            rid: linux-x64
-          - os: macos-14
-            rid: osx-arm64
+        include: ${{ fromJSON(inputs.platform == 'linux' && '[{"os":"ubuntu-22.04","rid":"linux-x64"}]' || inputs.platform == 'macos' && '[{"os":"macos-14","rid":"osx-arm64"}]' || inputs.platform == 'windows' && '[{"os":"windows-latest","rid":"win-x64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-22.04","rid":"linux-x64"},{"os":"macos-14","rid":"osx-arm64"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
