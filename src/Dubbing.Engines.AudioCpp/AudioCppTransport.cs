@@ -18,6 +18,7 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
     IProcessRunner runner, RuntimeCoordinator coordinator) : IAudioCppTransport, IDisposable
 {
     private readonly LocalServerHost host = new();
+    private readonly string audioWorkingDirectory = Path.Combine(Path.GetTempPath(), "opendub-audio-" + Guid.NewGuid().ToString("N"));
     private readonly HttpClient http = new() { Timeout = Timeout.InfiniteTimeSpan };
     private string? verifiedExecutable;
     private string buildInfo = "";
@@ -27,8 +28,9 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
         coordinator.RunAsync("audio.cpp", ReleaseAsync, host.Stop, async () =>
         {
             var endpoint = await EnsureAsync(model, ct);
+            using var staged = await NativeAudioRequest.CreateAsync(audioWorkingDirectory, request, ct);
             ActivityJournal.Write($"audio.cpp · {model.DisplayName} · {route}");
-            using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(endpoint, route)) { Content = JsonContent.Create(request) };
+            using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(endpoint, route)) { Content = JsonContent.Create(staged.Body) };
             using var response = await SendAsync(message, ct);
             await CheckAsync(response, ct);
             residentModel = model.Id;
@@ -38,8 +40,9 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
         coordinator.RunAsync("audio.cpp", ReleaseAsync, host.Stop, async () =>
         {
             var endpoint = await EnsureAsync(model, ct);
+            using var staged = await NativeAudioRequest.CreateAsync(audioWorkingDirectory, request, ct);
             ActivityJournal.Write($"audio.cpp · generating speech with {model.DisplayName}");
-            using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(endpoint, "v1/audio/speech")) { Content = JsonContent.Create(request) };
+            using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(endpoint, "v1/audio/speech")) { Content = JsonContent.Create(staged.Body) };
             using var response = await SendAsync(message, ct);
             await CheckAsync(response, ct);
             residentModel = model.Id;
@@ -111,16 +114,18 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
             host = "127.0.0.1", backend = SelectBackend(buildInfo), device = settings.Current.Device,
             threads = settings.Current.Threads, lazy_load = true, max_loaded_models = 1, ui_management = true, log_request_body = false,
             models = catalog.Models.Where(m => m.Provider == "audio.cpp" && IsInstalled(m))
-                .Select(m => new { id = m.Id, family = m.Family, path = catalog.ModelPath(m, settings.Current.ModelDirectory),
+                .Select(m => new { id = m.Id, family = m.Family, path = Path.GetFullPath(catalog.ModelPath(m, settings.Current.ModelDirectory)),
                     task = m.Task switch { Dubbing.Core.Engines.EngineTask.Transcription => "asr", Dubbing.Core.Engines.EngineTask.Alignment => "align",
                         Dubbing.Core.Engines.EngineTask.Diarization => "diar", Dubbing.Core.Engines.EngineTask.Separation => "sep", _ => "tts" }, mode = "offline" }).ToArray()
         };
         string content = JsonSerializer.Serialize(config);
-        string configPath = Path.Combine(Path.GetDirectoryName(settings.FilePath)!, "audio-server.json");
+        string configPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(settings.FilePath)!, "audio-server.json"));
         Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
         await File.WriteAllTextAsync(configPath, content, ct);
         var previousEndpoint = host.Endpoint;
-        var endpoint = await host.EnsureAsync(executable, content, port => ["--config", configPath, "--host", "127.0.0.1", "--port", port.ToString(), "--no-ui"], ct);
+        Directory.CreateDirectory(audioWorkingDirectory);
+        var endpoint = await host.EnsureAsync(Path.GetFullPath(executable), content, port => ["--config", configPath, "--host", "127.0.0.1", "--port", port.ToString(), "--no-ui"], ct);
+        if (previousEndpoint != endpoint) ActivityJournal.Write("audio.cpp · short WAV staging paths enabled.");
         if (previousEndpoint != endpoint) residentModel = null;
         if (!forInference) return endpoint;
         if (residentModel != selected.Id)
@@ -206,5 +211,5 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
             throw new EngineException($"Local audio runtime returned {(int)response.StatusCode}: {error[..Math.Min(error.Length, 1500)]}");
         }
     }
-    public void Dispose() { host.Dispose(); http.Dispose(); }
+    public void Dispose() { host.Dispose(); http.Dispose(); if (Directory.Exists(audioWorkingDirectory)) Directory.Delete(audioWorkingDirectory, true); }
 }

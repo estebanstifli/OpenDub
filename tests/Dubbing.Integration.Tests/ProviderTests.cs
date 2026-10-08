@@ -216,18 +216,19 @@ public sealed class ProviderTests : IDisposable
         try
         {
         string input = Environment.GetEnvironmentVariable("DUBBING_INDEX_TEST_AUDIO")!;
+        string longCache = Path.Combine(root, new string('a', 100), new string('b', 100), "referencias-日本語");
         var reference = new AudioReference(input, Start: TimeSpan.FromSeconds(60), End: TimeSpan.FromSeconds(65));
         var output = Path.Combine(AppContext.BaseDirectory, "index-source-spanish.wav");
         var result = await new AudioCppTtsEngine(Model(EngineTask.Tts), transport, Media).SynthesizeAsync(new()
         {
-            Text = "He visto cosas que no creerías.", Language = "es", OutputPath = output, VoiceReference = reference, Seed = 42, SpeakingRate = 1,
+            Text = "He visto cosas que no creerías.", Language = "es", OutputPath = output, VoiceReference = reference, Seed = 42, SpeakingRate = 1, ReferenceCacheDirectory = longCache,
             Emotion = new() { Mode = EmotionMode.SourceAudio, ReferenceAudio = reference, Intensity = 1 }
         }, null, ct.Token);
         Assert.True(result.Duration > TimeSpan.Zero);
         Assert.True(new FileInfo(output).Length > 1000);
         var second = Path.Combine(AppContext.BaseDirectory, "index-source-spanish-second.wav");
         var faster = await new AudioCppTtsEngine(Model(EngineTask.Tts), transport, Media).SynthesizeAsync(new()
-        { Text = "He visto cosas que no creerías.", Language = "es", OutputPath = second, VoiceReference = reference, Seed = 42, SpeakingRate = 1.25,
+        { Text = "He visto cosas que no creerías.", Language = "es", OutputPath = second, VoiceReference = reference, Seed = 42, SpeakingRate = 1.25, ReferenceCacheDirectory = longCache,
           Emotion = new() { Mode = EmotionMode.SourceAudio, ReferenceAudio = reference, Intensity = 1 } }, null, ct.Token);
         Assert.InRange(faster.Duration.TotalSeconds / result.Duration.TotalSeconds, .65, .95);
         runtimeLog.Enqueue($"Native speed validation: speed=1 duration={result.Duration.TotalSeconds:F3} s; speed=1.25 duration={faster.Duration.TotalSeconds:F3} s");
