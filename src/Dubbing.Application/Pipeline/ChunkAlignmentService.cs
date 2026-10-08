@@ -27,12 +27,17 @@ public sealed class ChunkAlignmentService(IMediaEngine media)
                 int tokenIndex = 0;
                 foreach (var word in result.Words)
                 {
+                    // Model timestamps may extend a frame beyond the audio provided.
+                    // Clamp locally before adding the global offset, never across speakers.
+                    long length = (segment.End - segment.Start).Ticks;
+                    var start = TimeSpan.FromTicks(Math.Clamp(word.Start.Ticks, 0, length));
+                    var end = TimeSpan.FromTicks(Math.Clamp(word.End.Ticks, 0, length));
                     string text = word.Text;
                     // The aligner strips punctuation. Restore it when token identity is exact so
                     // later semantic grouping can keep sentence boundaries without altering timing.
                     string Key(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
                     if (tokenIndex < tokens.Length && Key(tokens[tokenIndex]) == Key(word.Text)) text = tokens[tokenIndex++];
-                    words.Add(word with { Text = text, Start = word.Start + segment.Start, End = word.End + segment.Start });
+                    if (end > start) words.Add(word with { Text = text, Start = start + segment.Start, End = end + segment.Start });
                 }
             }
             return new(words);

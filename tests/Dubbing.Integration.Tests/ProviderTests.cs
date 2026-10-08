@@ -343,24 +343,77 @@ public sealed class ProviderTests : IDisposable
     {
         Directory.CreateDirectory(root);
         string audio = Path.Combine(root, "long.wav");
-        await new MockTtsEngine().SynthesizeAsync(new() { Text = "Hello", Language = "en", OutputPath = audio, TargetDuration = TimeSpan.FromSeconds(31) }, null, default);
+        await new MockTtsEngine().SynthesizeAsync(new() { Text = "Hello", Language = "en", OutputPath = audio, TargetDuration = TimeSpan.FromSeconds(121) }, null, default);
         var transport = new FakeTransport { Response = """{"text":"Hello","language":"English","words":[{"word":"Hello","start_sample":1600,"end_sample":8000}]}""" };
         var durations = new List<double>();
         transport.BeforeJson = async body =>
         {
             var request = body.TryGetProperty("request", out var nested) ? nested : body;
             durations.Add((await Media.ProbeAsync(request.GetProperty("audio").GetString()!, default)).Duration.TotalSeconds);
-            if (body.TryGetProperty("request", out _)) Assert.Equal("Hello!", request.GetProperty("text").GetString());
+            if (body.TryGetProperty("request", out _))
+            {
+                Assert.Equal("Hello!", request.GetProperty("text").GetString());
+                Assert.True(request.GetProperty("options").GetProperty("clamp_timestamps_to_audio").GetBoolean());
+            }
+            else
+            {
+                Assert.Equal(60, request.GetProperty("options").GetProperty("audio_chunk_seconds").GetInt32());
+                Assert.Equal("fixed", request.GetProperty("options").GetProperty("audio_chunk_mode").GetString());
+                Assert.Equal(2048, request.GetProperty("options").GetProperty("max_tokens").GetInt32());
+            }
         };
-        var transcript = await new AudioCppTranscriptionEngine(Model(EngineTask.Transcription), transport, Media).TranscribeAsync(new(new(audio), "en", TimeSpan.FromSeconds(31)), null, default);
-        Assert.Equal(new[] { 0d, 15d, 30d }, transcript.Segments.Select(s => s.Start.TotalSeconds));
-        Assert.Equal(new[] { 15d, 30d, 31d }, transcript.Segments.Select(s => s.End.TotalSeconds));
+        var transcript = await new AudioCppTranscriptionEngine(Model(EngineTask.Transcription), transport, Media).TranscribeAsync(new(new(audio), "en", TimeSpan.FromSeconds(121)), null, default);
+        Assert.Equal(new[] { 0d, 60d, 120d }, transcript.Segments.Select(s => s.Start.TotalSeconds));
+        Assert.Equal(new[] { 60d, 120d, 121d }, transcript.Segments.Select(s => s.End.TotalSeconds));
         transcript = transcript with { Segments = transcript.Segments.Select(s => s with { Text = "Hello!" }).ToArray() };
         var aligned = await new ChunkAlignmentService(Media).AlignAsync(new AudioCppAlignmentEngine(Model(EngineTask.Alignment), transport), new(audio), transcript, "en", null, default);
         Assert.All(aligned.Words, word => Assert.Equal("Hello!", word.Text));
-        Assert.Equal(new[] { .1, 15.1, 30.1 }, aligned.Words.Select(w => w.Start.TotalSeconds));
-        Assert.Equal(new[] { 15d, 15d, 1d, 15d, 15d, 1d }, durations);
+        Assert.Equal(new[] { .1, 60.1, 120.1 }, aligned.Words.Select(w => w.Start.TotalSeconds));
+        Assert.Equal(new[] { 60d, 60d, 1d, 60d, 60d, 1d }, durations);
         Assert.False(File.Exists(transport.Body.GetProperty("request").GetProperty("audio").GetString()));
+    }
+
+    [FFmpegFact] public async Task AlignmentClampsBoundaryOvershootBeforeAddingChunkOffset()
+    {
+        Directory.CreateDirectory(root);
+        string audio = Path.Combine(root, "boundary.wav");
+        await new MockTtsEngine().SynthesizeAsync(new() { Text = "test", Language = "en", OutputPath = audio, TargetDuration = TimeSpan.FromSeconds(2) }, null, default);
+        var transport = new FakeTransport { Response = """{"sample_rate":16000,"words":[{"word":"word","start_sample":14400,"end_sample":16640}]}""" };
+        var transcript = new TranscriptionResult("word word", "en", [new("word", TimeSpan.Zero, TimeSpan.FromSeconds(1)), new("word", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2))]);
+        var result = await new ChunkAlignmentService(Media).AlignAsync(new AudioCppAlignmentEngine(Model(EngineTask.Alignment), transport), new(audio), transcript, "en", null, default);
+        Assert.Equal(new[] { 1d, 2d }, result.Words.Select(w => w.End.TotalSeconds));
+        Assert.Equal(new[] { .9, 1.9 }, result.Words.Select(w => w.Start.TotalSeconds));
+    }
+
+    [InstalledMinuteAsrFact] public async Task InstalledModelsTranscribeAndAlignOneMinuteBlocks()
+    {
+        Directory.CreateDirectory(root);
+        using var ct = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        var settings = new SettingsStore(Path.Combine(root, "settings.json"));
+        await settings.SaveAsync(new() { ModelDirectory = Environment.GetEnvironmentVariable("DUBBING_ASR_TEST_MODELS")!, AudioServerPath = Environment.GetEnvironmentVariable("DUBBING_AUDIO_SERVER"), Threads = 12 }, ct.Token);
+        using var coordinator = new RuntimeCoordinator();
+        using var transport = new AudioCppTransport(settings, Catalog, new RuntimeLocator(Environment.GetEnvironmentVariable("DUBBING_RUNTIME_TEST_ROOT")), runner, coordinator);
+        string audio = Environment.GetEnvironmentVariable("DUBBING_ASR_TEST_AUDIO")!;
+        var transcript = await new AudioCppTranscriptionEngine(Model(EngineTask.Transcription), transport, Media).TranscribeAsync(new(new(audio), "en"), null, ct.Token);
+        Assert.Equal(2, transcript.Segments.Count);
+        Assert.Equal(TimeSpan.FromSeconds(60), transcript.Segments[0].End);
+        Assert.Equal(TimeSpan.FromSeconds(60), transcript.Segments[1].Start);
+        var aligned = await new ChunkAlignmentService(Media).AlignAsync(new AudioCppAlignmentEngine(Model(EngineTask.Alignment), transport), new(audio), transcript, "en", null, ct.Token);
+        Assert.NotEmpty(aligned.Words);
+        Assert.Contains(aligned.Words, w => w.Start > TimeSpan.FromSeconds(60));
+        Assert.DoesNotContain(aligned.Words, w => w.Start < TimeSpan.FromSeconds(60) && w.End > TimeSpan.FromSeconds(60));
+        Assert.All(aligned.Words, w => Assert.True(w.Start >= TimeSpan.Zero && w.End <= TimeSpan.FromSeconds(65) && w.End > w.Start));
+        await coordinator.ReleaseAsync();
+        await File.WriteAllTextAsync(Path.Combine(AppContext.BaseDirectory, "minute-asr-smoke.json"), JsonSerializer.Serialize(new { transcript, aligned }), ct.Token);
+    }
+
+    private sealed class InstalledMinuteAsrFactAttribute : FactAttribute
+    {
+        public InstalledMinuteAsrFactAttribute()
+        {
+            if (Environment.GetEnvironmentVariable("DUBBING_ASR_TEST_AUDIO") is null || Environment.GetEnvironmentVariable("DUBBING_ASR_TEST_MODELS") is null)
+                Skip = "Requires installed models and a 65-second speech recording.";
+        }
     }
 
     [FFmpegFact] public async Task CancelledTranscriptionRemovesTemporaryAudio()

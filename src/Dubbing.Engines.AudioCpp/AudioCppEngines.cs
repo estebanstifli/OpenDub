@@ -30,6 +30,7 @@ public static class AudioCppResults
 
 public sealed class AudioCppTranscriptionEngine(CatalogModel model, IAudioCppTransport transport, IMediaEngine media) : ITranscriptionEngine
 {
+    public const int ChunkSeconds = 60;
     public EngineDescriptor Descriptor => model.Descriptor;
     public async Task<TranscriptionResult> TranscribeAsync(TranscriptionRequest request, IProgress<EngineProgress>? progress, CancellationToken cancellationToken)
     {
@@ -41,13 +42,13 @@ public sealed class AudioCppTranscriptionEngine(CatalogModel model, IAudioCppTra
             var segments = new List<TranscriptSegment>();
             var words = new List<WordTiming>();
             var language = request.Language ?? "und";
-            for (var start = TimeSpan.Zero; start < duration; start += TimeSpan.FromSeconds(15))
+            for (var start = TimeSpan.Zero; start < duration; start += TimeSpan.FromSeconds(ChunkSeconds))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var length = TimeSpan.FromSeconds(Math.Min(15, (duration - start).TotalSeconds));
+                var length = TimeSpan.FromSeconds(Math.Min(ChunkSeconds, (duration - start).TotalSeconds));
                 var path = Path.Combine(scratch, "chunk.wav");
                 await media.CutAsync(request.Audio.Path, path, start, length, cancellationToken);
-                progress?.Report(new(start.TotalSeconds / duration.TotalSeconds, $"Transcribing audio ({start.TotalSeconds:0}/{duration.TotalSeconds:0} s)…"));
+                progress?.Report(new(start.TotalSeconds / duration.TotalSeconds, $"Transcribing audio ({start.TotalSeconds:0}–{(start + length).TotalSeconds:0}/{duration.TotalSeconds:0} s; {ChunkSeconds} s blocks)…"));
                 var part = await TranscribeChunkAsync(new(new(path), request.Language, length), null, cancellationToken);
                 language = part.Language;
                 // Keep the exact audio boundary paired with its transcript for forced alignment.
@@ -63,7 +64,8 @@ public sealed class AudioCppTranscriptionEngine(CatalogModel model, IAudioCppTra
     {
         progress?.Report(new(0, "Transcribing audio…"));
         var result = await transport.JsonAsync(model, "v1/audio/transcriptions/details", new { model = model.Id,
-            audio = request.Audio.Path, language = model.LanguageNames.GetValueOrDefault(request.Language ?? "", request.Language ?? "") }, cancellationToken);
+            audio = request.Audio.Path, language = model.LanguageNames.GetValueOrDefault(request.Language ?? "", request.Language ?? ""),
+            options = new { audio_chunk_mode = "fixed", audio_chunk_seconds = ChunkSeconds, max_tokens = 2048 } }, cancellationToken);
         int rate = AudioCppResults.SampleRate(result);
         var words = AudioCppResults.Words(result);
         string text = AudioCppResults.Text(result, "text");
@@ -99,7 +101,8 @@ public sealed class AudioCppAlignmentEngine(CatalogModel model, IAudioCppTranspo
     public async Task<AlignmentResult> AlignAsync(AlignmentRequest request, CancellationToken cancellationToken)
     {
         var result = await transport.JsonAsync(model, "v1/tasks/run", new { model = model.Id, request = new
-        { audio = request.Audio.Path, text = request.Text, language = model.LanguageNames.GetValueOrDefault(request.Language, request.Language) } }, cancellationToken);
+        { audio = request.Audio.Path, text = request.Text, language = model.LanguageNames.GetValueOrDefault(request.Language, request.Language),
+            options = new { clamp_timestamps_to_audio = true } } }, cancellationToken);
         return new(AudioCppResults.Words(result));
     }
 }

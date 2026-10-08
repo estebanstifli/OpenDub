@@ -13,6 +13,10 @@ audio.cpp launches on an allocated loopback port with lazy loading and a maximum
 
 llama-server uses structured chat-completion JSON. The adapter checks segment ID, nonempty text and target language, retries malformed responses/server errors, and sends neighboring dialogue, glossary and target duration. The UI selects an installed local GGUF explicitly.
 
+## Transcription and alignment
+
+Import transcribes 60-second audio blocks with Qwen3-ASR, explicitly setting `audio_chunk_mode=fixed`, `audio_chunk_seconds=60`, and `max_tokens=2048` in the server request. The final block uses the remaining duration. Each transcript is paired with exactly the same audio range for forced alignment; `clamp_timestamps_to_audio=true` and an application-side bounds check keep word timestamps inside that range. These analysis blocks are independent of the final dialogue segments, which are still grouped by speaker, pauses and sentence punctuation, then normalized. Transcription and alignment cache versions change with this policy; existing projects are not rebuilt merely by opening them. A native CUDA smoke test covers 60 + 5 seconds of actual speech and alignment across the block boundary.
+
 ## TTS capabilities
 
 Choose **Ollama (local)** as the translation engine to list installed local chat models from `127.0.0.1:11434`. Select a model in the dropdown; the selection is saved per project and also used for duration-driven rewrites. Refresh rescans the installation. Embedding-only models and cloud-backed aliases are excluded. Ollama must already be running; the app never downloads a model or stops the Ollama service. Requests use structured JSON and keep the chosen model resident between operations (`keep_alive=-1`). When another provider needs the accelerator, or on explicit unload / application exit, the app unloads only the Ollama model it used with `keep_alive=0`. After an abnormal application termination, Ollama may retain the model until it is manually unloaded or evicted. The service stays running. API contracts: [list models](https://docs.ollama.com/api/tags), [chat](https://docs.ollama.com/api/chat).

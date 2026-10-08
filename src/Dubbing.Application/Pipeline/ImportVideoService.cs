@@ -27,7 +27,7 @@ public sealed class ImportVideoService(IMediaEngine media, IProjectStore store, 
         fingerprint = StageCache.Key(fingerprint, project.Settings.AnalysisStreamIndex, project.AnalysisAudio.Path);
         var workAudio = new AudioReference(workPath, fingerprint);
         var transcriber = registry.GetEngine<ITranscriptionEngine>(project.Engines.Transcription ?? throw new InvalidOperationException("Select a transcription engine."));
-        var transcript = await StageCache.GetAsync(directory, "transcript", StageCache.Key("chunked-v2", fingerprint, transcriber.Descriptor.EngineId, transcriber.Descriptor.Version, project.Settings.SourceLanguage),
+        var transcript = await StageCache.GetAsync(directory, "transcript", StageCache.Key("chunked-v3-60s", fingerprint, transcriber.Descriptor.EngineId, transcriber.Descriptor.Version, project.Settings.SourceLanguage),
             () => transcriber.TranscribeAsync(new(workAudio, project.Settings.SourceLanguage, info.Duration), progress, cancellationToken), cancellationToken);
         var diarizer = registry.GetEngine<IDiarizationEngine>(project.Engines.Diarization ?? throw new InvalidOperationException("Select a diarization engine."));
         var diarization = await StageCache.GetAsync(directory, "diarization", StageCache.Key(fingerprint, diarizer.Descriptor.EngineId, diarizer.Descriptor.Version),
@@ -36,7 +36,7 @@ public sealed class ImportVideoService(IMediaEngine media, IProjectStore store, 
         {
             var aligner = registry.GetEngine<IAlignmentEngine>(alignmentId);
             progress?.Report(new(0, "Aligning words…"));
-            var alignment = await StageCache.GetAsync(directory, "alignment", StageCache.Key("chunked-v3-punctuation", fingerprint, transcript.Segments, aligner.Descriptor.EngineId, aligner.Descriptor.Version, project.Settings.SourceLanguage),
+            var alignment = await StageCache.GetAsync(directory, "alignment", StageCache.Key("chunked-v4-clamped", fingerprint, transcript.Segments, aligner.Descriptor.EngineId, aligner.Descriptor.Version, project.Settings.SourceLanguage),
                 () => new ChunkAlignmentService(media).AlignAsync(aligner, workAudio, transcript, project.Settings.SourceLanguage, progress, cancellationToken), cancellationToken);
             transcript = transcript with { Words = alignment.Words };
         }
