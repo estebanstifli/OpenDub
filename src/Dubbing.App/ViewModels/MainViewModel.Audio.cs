@@ -113,7 +113,7 @@ public partial class MainViewModel
         StopRequested?.Invoke();
         try
         {
-            if (!await ResolveCollisionsAsync(ct)) return;
+            if (!await ReviewPlaybackOverlapsAsync(ct)) return;
             var plan = await PlaybackPlanAsync(ct, audition);
             ct.ThrowIfCancellationRequested();
             DubPreviewPath = null; TrackPlayback = true; PlaybackTimelineOffset = 0;

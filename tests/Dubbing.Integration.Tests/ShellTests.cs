@@ -74,6 +74,19 @@ public sealed class ShellTests
             vm.BackgroundGain = .8; await WaitForSave(); Assert.Equal(1, dialogs.CollisionReviews);
             vm.Editor.StartSeconds = 17.3; await vm.SaveCommand.ExecuteAsync(null);
             Assert.Equal(2, dialogs.CollisionReviews);
+            var playbackGate = typeof(MainViewModel).GetMethod("ReviewPlaybackOverlapsAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            Task<bool> PlayGate() => (Task<bool>)playbackGate.Invoke(vm, [CancellationToken.None])!;
+            var unchanged = session.Project;
+            dialogs.PlaybackOverlap = PlaybackOverlapChoice.IgnoreAndPlay;
+            Assert.True(await PlayGate()); Assert.True(await PlayGate());
+            Assert.Equal(2, dialogs.PlaybackWarnings); Assert.Equal(2, dialogs.CollisionReviews);
+            Assert.Same(unchanged, session.Project); Assert.NotNull(SegmentCollisions.Find(session.Project));
+            dialogs.PlaybackOverlap = PlaybackOverlapChoice.Cancel;
+            Assert.False(await PlayGate()); Assert.Equal(2, dialogs.CollisionReviews);
+            dialogs.PlaybackOverlap = PlaybackOverlapChoice.Review;
+            Assert.False(await PlayGate()); Assert.Equal(3, dialogs.CollisionReviews);
+            session.Update(session.Project with { Segments = [] });
+            Assert.True(await PlayGate()); Assert.Equal(4, dialogs.PlaybackWarnings);
         }
         finally { vm.StopAutoSave(); if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
@@ -122,6 +135,27 @@ public sealed class ShellTests
             return result;
         }
     }
+    [AvaloniaFact]
+    public async Task PlaybackOverlapDialogHasTwoChoicesAndClosingCancels()
+    {
+        var owner = new Window(); owner.Show();
+        try
+        {
+            var dialogs = new ProjectDialogs(owner);
+            foreach (var (label, expected) in new[] { ("Ignore and play", PlaybackOverlapChoice.IgnoreAndPlay), ("View overlaps", PlaybackOverlapChoice.Review), ("", PlaybackOverlapChoice.Cancel) })
+            {
+                var pending = dialogs.ConfirmPlaybackOverlapsAsync();
+                var dialog = owner.OwnedWindows.Single(); dialog.UpdateLayout();
+                var buttons = dialog.GetVisualDescendants().OfType<Button>().Where(b => b.Tag is string).ToArray();
+                Assert.Equal(2, buttons.Length);
+                if (label.Length == 0) dialog.Close();
+                else buttons.Single(b => b.Tag as string == label).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                Assert.Equal(expected, await pending);
+            }
+        }
+        finally { owner.Close(); }
+    }
+
     [AvaloniaFact]
     public async Task OverlapDialogUsesVisibleOwnerAndRequiresExplicitDecision()
     {
@@ -743,6 +777,9 @@ public sealed class ShellTests
 
     private sealed class FakeDialogs(string directory) : IProjectDialogs
     {
+        public PlaybackOverlapChoice PlaybackOverlap { get; set; } = PlaybackOverlapChoice.Cancel;
+        public int PlaybackWarnings { get; private set; }
+        public Task<PlaybackOverlapChoice> ConfirmPlaybackOverlapsAsync() { PlaybackWarnings++; return Task.FromResult(PlaybackOverlap); }
         public CollisionChoice Collision { get; set; } = CollisionChoice.Cancel;
         public int CollisionReviews { get; private set; }
         public SegmentCollision? LastCollision { get; private set; }

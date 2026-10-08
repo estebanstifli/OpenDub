@@ -266,7 +266,7 @@ public partial class MainViewModel
         preparingDub = true;
         try
         {
-            if (!await ResolveCollisionsAsync(ct)) return;
+            if (!await ReviewPlaybackOverlapsAsync(ct)) return;
             var plan = await PlaybackPlanAsync(ct);
             ct.ThrowIfCancellationRequested();
             DubPreviewPath = null; PlaybackTimelineOffset = 0; TrackPlayback = true;

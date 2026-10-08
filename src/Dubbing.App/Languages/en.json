@@ -352,5 +352,9 @@
   "Translate the selected segment before regenerating speech.": "Translate the selected segment before regenerating speech.",
   "No neighbouring segment is available.": "No neighbouring segment is available.",
   "No overlap remains for this segment.": "No overlap remains for this segment.",
-  "Audio preview could not start.": "Audio preview could not start."
+  "Audio preview could not start.": "Audio preview could not start.",
+  "Some segments overlap.": "Some segments overlap.",
+  "You can play anyway or review the overlapping segments. Ignoring overlaps applies only to this playback.": "You can play anyway or review the overlapping segments. Ignoring overlaps applies only to this playback.",
+  "Ignore and play": "Ignore and play",
+  "View overlaps": "View overlaps"
 }

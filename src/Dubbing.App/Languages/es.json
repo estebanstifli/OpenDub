@@ -259,5 +259,9 @@
   "Translate the selected segment before regenerating speech.": "Traduce el segmento seleccionado antes de regenerar su voz.",
   "No neighbouring segment is available.": "No hay ningún segmento vecino disponible.",
   "No overlap remains for this segment.": "No queda ningún solapamiento en este segmento.",
-  "Audio preview could not start.": "No se pudo iniciar la reproducción de audio."
+  "Audio preview could not start.": "No se pudo iniciar la reproducción de audio.",
+  "Some segments overlap.": "Hay solapamientos en algunos segmentos.",
+  "You can play anyway or review the overlapping segments. Ignoring overlaps applies only to this playback.": "Puedes reproducir igualmente o revisar los segmentos solapados. Ignorar los solapamientos solo se aplica a esta reproducción.",
+  "Ignore and play": "Ignorar y reproducir",
+  "View overlaps": "Ver los solapamientos"
 }

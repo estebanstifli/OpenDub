@@ -8,9 +8,11 @@ using Dubbing.Core.Projects;
 namespace Dubbing.App.Services;
 
 public enum UnsavedChoice { Save, Discard, Cancel }
+public enum PlaybackOverlapChoice { Cancel, IgnoreAndPlay, Review }
 public sealed record AudioTrackChoice(IReadOnlyList<SourceAudioTrack> Tracks, int AnalysisIndex, bool Separate);
 public interface IProjectDialogs
 {
+    Task<PlaybackOverlapChoice> ConfirmPlaybackOverlapsAsync() => Task.FromResult(PlaybackOverlapChoice.Cancel);
     Task<Dubbing.Application.Projects.CollisionDecision> EditOverlapAsync(Dubbing.App.ViewModels.OverlapEditorModel model, CancellationToken ct)
         => ResolveCollisionAsync(model.Collision);
     Task<Dubbing.Application.Projects.CollisionDecision> ResolveCollisionAsync(Dubbing.Application.Projects.SegmentCollision collision)

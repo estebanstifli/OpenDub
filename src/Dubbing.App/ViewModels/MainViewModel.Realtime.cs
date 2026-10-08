@@ -25,6 +25,21 @@ public partial class MainViewModel
         return pendingTimingReviews.Count == 0 ? Task.FromResult(true) : ResolveAffectedCollisionsAsync(ct, [.. pendingTimingReviews]);
     }
     private Task<bool> ResolveCollisionsAsync(CancellationToken ct) => ResolveAffectedCollisionsAsync(ct, null);
+    private async Task<bool> ReviewPlaybackOverlapsAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (SegmentCollisions.Find(session.Project) is null) return true;
+        PauseRequested?.Invoke();
+        var choice = await dialogs.ConfirmPlaybackOverlapsAsync();
+        ct.ThrowIfCancellationRequested();
+        // Playback-only bypass: do not accept collisions permanently or change export validation.
+        return choice switch
+        {
+            Services.PlaybackOverlapChoice.IgnoreAndPlay => true,
+            Services.PlaybackOverlapChoice.Review => await ResolveCollisionsAsync(ct),
+            _ => false
+        };
+    }
     private async Task<bool> ResolveAffectedCollisionsAsync(CancellationToken ct, HashSet<string>? affectedIds)
     {
         if (resolvingCollisions) return false;
