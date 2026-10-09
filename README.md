@@ -31,9 +31,11 @@ Imports copy the source video into the project by default. JSON stores a relativ
 ## Export
 
 - **Recommended MP4:** H.264 video, AAC audio and optional selectable subtitles.
-- **Preserve video quality (MKV):** copies the original video stream.
+- **Preserve video quality (MKV):** copies the original video stream for full-length exports.
 - **Editing package:** dialogue WAV, available background WAV, mix WAV and SRT.
-- **Audio only:** mixed WAV and SRT.
+- **Audio only:** choose MP3 (default, 192 kb/s stereo), WAV (24-bit PCM), FLAC, M4A (AAC) or OGG (Vorbis).
+
+**Export time** defaults to All. Select Time range and enter start/end as `HH:MM:SS` (optional milliseconds, e.g. `00:10:05.250`). Audio, video and subtitles are cropped together and start at zero in the exported file; gaps stay silent. Video ranges are re-encoded as H.264 for accurate cuts, including MKV. Segments outside the range do not require generated speech.
 
 Video profiles can retain original audio as alternative tracks. Export uses timeline mute/gain settings, validates audio/timing and requires an empty destination. Files are prepared before publication; previous exports are preserved. WAV, SRT and render metadata accompany video.
 

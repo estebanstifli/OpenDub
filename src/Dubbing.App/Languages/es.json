@@ -263,5 +263,14 @@
   "Some segments overlap.": "Hay solapamientos en algunos segmentos.",
   "You can play anyway or review the overlapping segments. Ignoring overlaps applies only to this playback.": "Puedes reproducir igualmente o revisar los segmentos solapados. Ignorar los solapamientos solo se aplica a esta reproducción.",
   "Ignore and play": "Ignorar y reproducir",
-  "View overlaps": "Ver los solapamientos"
+  "View overlaps": "Ver los solapamientos",
+  "Audio format": "Formato de audio",
+  "Export time": "Tiempo de exportación",
+  "Time range": "Intervalo de tiempo",
+  "Start time (HH:MM:SS)": "Inicio (HH:MM:SS)",
+  "End time (HH:MM:SS)": "Final (HH:MM:SS)",
+  "The selected range applies to audio, video and subtitles. You can include milliseconds, for example 00:10:05.250.": "El intervalo se aplica al audio, vídeo y subtítulos. Puedes incluir milisegundos, por ejemplo 00:10:05.250.",
+  "Full-length MKV preserves the video stream. MP4 and video ranges use H.264. Audio only exports the selected format; editing packages include WAV stems and SRT subtitles.": "MKV completo conserva el vídeo original. MP4 e intervalos de vídeo usan H.264. Solo audio exporta el formato elegido; los paquetes de edición incluyen pistas WAV y subtítulos SRT.",
+  "Choose a time range inside the video, with the end after the start.": "Elige un intervalo dentro del vídeo, con el final posterior al inicio.",
+  "Enter a time as HH:MM:SS, optionally with milliseconds.": "Introduce un tiempo como HH:MM:SS, opcionalmente con milisegundos."
 }

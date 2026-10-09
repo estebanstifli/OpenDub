@@ -13,7 +13,7 @@ public static class SegmentCollisions
 {
     // Shared boundaries are valid. Ignore only sub-frame/sample rounding (up to 2 ms).
     public static readonly TimeSpan BoundaryTolerance = TimeSpan.FromMilliseconds(2);
-    public static SegmentCollision? Find(DubbingProject project, IReadOnlySet<string>? affectedIds = null)
+    public static SegmentCollision? Find(DubbingProject project, IReadOnlySet<string>? affectedIds = null, TimeSpan? rangeStart = null, TimeSpan? rangeEnd = null)
     {
         var active = project.Segments.Select((s, i) => (Segment: s, Number: i + 1)).Where(x => !x.Segment.ExcludedFromDubbing).OrderBy(x => x.Segment.Start).ToArray();
         var affected = affectedIds is null ? null : Enumerable.Range(0, active.Length).Where(i => affectedIds.Contains(active[i].Segment.Id)).ToArray();
@@ -31,6 +31,9 @@ public static class SegmentCollisions
                 if (j <= i) continue;
                 var b = active[j];
                 if (b.Segment.Start >= end - BoundaryTolerance) break;
+                if (rangeEnd is { } until && b.Segment.Start >= until) break;
+                if (rangeStart is { } from && (end <= from ||
+                    (b.Segment.End <= from && b.Segment.Start + ProjectAudioMix.EffectiveDuration(b.Segment) <= from))) continue;
                 string key = StageCache.Key(a.Segment.Id, a.Segment.Start, a.Segment.End, speech?.Fingerprint, speech?.Duration, a.Segment.ClipAudioToSlot,
                     b.Segment.Id, b.Segment.Start, b.Segment.End, ProjectAudioMix.EffectiveSpeech(b.Segment)?.Fingerprint);
                 if (!project.AcceptedOverlaps.Contains(key)) return new(key, a.Segment, b.Segment, a.Number, b.Number, end);

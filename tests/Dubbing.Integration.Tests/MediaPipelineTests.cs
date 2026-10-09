@@ -66,6 +66,58 @@ public sealed class MediaPipelineTests : IDisposable
             options with { Directory = Path.Combine(directory, "changed"), AllowDurationMismatch = true }));
     }
 
+    [FFmpegFact]
+    public async Task AudioFormatsAndVideoRangeExportSeekCropAndPreserveGaps()
+    {
+        Directory.CreateDirectory(directory);
+        string video = Path.Combine(directory, "range.mp4"), voice = Path.Combine(directory, "voice.wav");
+        var fixture = await runner.RunAsync(new(FFmpeg, ["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=s=160x90:r=10:d=6",
+            "-f", "lavfi", "-i", "sine=frequency=220:sample_rate=16000:duration=6", "-c:v", "mpeg4", "-c:a", "aac", "-shortest", video]), default);
+        Assert.Equal(0, fixture.ExitCode);
+        // First second is silent: a range starting halfway through this WAV must seek into its sound.
+        fixture = await runner.RunAsync(new(FFmpeg, ["-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=16000:duration=1",
+            "-af", "adelay=1000:all=1", "-c:a", "pcm_s16le", voice]), default);
+        Assert.Equal(0, fixture.ExitCode);
+        var speech = new GeneratedSpeech("voice.wav", TimeSpan.FromSeconds(2), "test", await Dubbing.Application.Media.ContentFingerprint.ComputeAsync(voice, default));
+        var project = new DubbingProject { Source = new(video, await Dubbing.Application.Media.ContentFingerprint.ComputeAsync(video, default), TimeSpan.FromSeconds(6), 1, 16000),
+            Segments = [new() { Start = TimeSpan.FromSeconds(1), End = TimeSpan.FromSeconds(3), GeneratedSpeech = speech, Translation = new("es", "First"), DirtyStages = [] },
+                new() { Start = TimeSpan.FromSeconds(2.5), End = TimeSpan.FromSeconds(4.5), GeneratedSpeech = speech, Translation = new("es", "Second"), DirtyStages = [] },
+                new() { Start = TimeSpan.FromSeconds(5), End = TimeSpan.FromSeconds(6), Translation = new("es", "Outside missing speech") }] };
+        var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
+        var export = new ExportVideoService(Media, new DubRenderService(Media), store);
+        var options = new ExportOptions { Profile = "Audio only", Start = TimeSpan.FromSeconds(2), End = TimeSpan.FromSeconds(4) };
+        foreach (var (format, codec) in new[] { ("MP3", "mp3"), ("WAV", "pcm_s24le"), ("FLAC", "flac"), ("M4A", "aac"), ("OGG", "vorbis") })
+        {
+            string destination = Path.Combine(directory, format);
+            var result = await export.ExportAsync(project, directory, null, default, options with { Directory = destination, AudioFormat = format });
+            Assert.Equal(project.Segments[0].Status, result.Segments[0].Status);
+            string output = Path.Combine(destination, "dub_track." + format.ToLowerInvariant());
+            var info = await Media.ProbeAsync(output, default);
+            Assert.Single(info.Streams); Assert.Equal(codec, info.Streams[0].Codec);
+            Assert.InRange(info.Duration.TotalSeconds, 1.99, 2.1);
+            Assert.False(File.Exists(Path.Combine(destination, "subtitles.srt")));
+            string raw = Path.Combine(directory, format + ".pcm");
+            var decoded = await runner.RunAsync(new(FFmpeg, ["-v", "error", "-i", output, "-ac", "1", "-ar", "16000", "-f", "s16le", raw]), default);
+            Assert.Equal(0, decoded.ExitCode);
+            var bytes = await File.ReadAllBytesAsync(raw);
+            double Energy(double start) => Math.Sqrt(Enumerable.Range((int)(start * 16000), 1600)
+                .Select(i => Math.Pow(BinaryPrimitives.ReadInt16LittleEndian(bytes.AsSpan(i * 2, 2)), 2)).Average());
+            Assert.True(Energy(.2) > 500); Assert.InRange(Energy(1.2), 0, 2); Assert.True(Energy(1.7) > 500);
+        }
+        string mp4Directory = Path.Combine(directory, "mp4-range");
+        await export.ExportAsync(project, directory, null, default, options with { Profile = "Recommended MP4", Directory = mp4Directory, KeepOriginalAudio = true });
+        var movie = await Media.ProbeAsync(Path.Combine(mp4Directory, "dubbed.mp4"), default);
+        Assert.Equal(2, movie.Streams.Count(s => s.Type == "audio"));
+        Assert.Contains(movie.Streams, s => s.Type == "video" && s.Codec == "h264");
+        Assert.InRange(movie.Duration.TotalSeconds, 1.99, 2.1);
+        string srt = await File.ReadAllTextAsync(Path.Combine(mp4Directory, "subtitles.srt"));
+        Assert.Contains("00:00:00,000 --> 00:00:01,000", srt);
+        Assert.Contains("00:00:00,500 --> 00:00:02,000", srt);
+        Assert.DoesNotContain("Outside", srt);
+        await Assert.ThrowsAsync<ArgumentException>(() => export.ExportAsync(project, directory, null, default, options with { Start = TimeSpan.FromSeconds(4), End = TimeSpan.FromSeconds(2) }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => export.ExportAsync(project, directory, null, default, options with { Start = null, End = null, Directory = Path.Combine(directory, "all") }));
+    }
+
     private readonly string directory = Path.Combine(Path.GetTempPath(), "dubbing test ' español " + Guid.NewGuid());
     private readonly ProcessRunner runner = new(NullLogger<ProcessRunner>.Instance);
     private readonly RuntimeLocator locator = new();

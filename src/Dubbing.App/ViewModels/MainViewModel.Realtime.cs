@@ -40,7 +40,7 @@ public partial class MainViewModel
             _ => false
         };
     }
-    private async Task<bool> ResolveAffectedCollisionsAsync(CancellationToken ct, HashSet<string>? affectedIds)
+    private async Task<bool> ResolveAffectedCollisionsAsync(CancellationToken ct, HashSet<string>? affectedIds, TimeSpan? rangeStart = null, TimeSpan? rangeEnd = null)
     {
         if (resolvingCollisions) return false;
         ResetTimingReviewsForProject();
@@ -55,7 +55,7 @@ public partial class MainViewModel
         {
             while (true)
             {
-                var collision = SegmentCollisions.Find(session.Project, affectedIds);
+                var collision = SegmentCollisions.Find(session.Project, affectedIds, rangeStart, rangeEnd);
                 if (collision is null)
                 {
                     var pending = session.Project.Segments.Where(s => merged.Contains(s.Id)).ToArray();

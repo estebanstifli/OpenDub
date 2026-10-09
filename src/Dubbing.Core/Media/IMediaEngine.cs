@@ -6,14 +6,16 @@ public sealed record MediaStreamInfo(int Index, string Type, string Codec, int? 
     int? SampleRate = null, string? ChannelLayout = null, string? FrameRate = null, string? TimeBase = null,
     string? Language = null, string? Title = null, bool IsDefault = false);
 public sealed record MediaInfo(TimeSpan Duration, IReadOnlyList<MediaStreamInfo> Streams);
-public sealed record AudioClip(string Path, TimeSpan Start, double Gain = 1, TimeSpan? Limit = null);
+public sealed record AudioClip(string Path, TimeSpan Start, double Gain = 1, TimeSpan? Limit = null, TimeSpan SourceOffset = default);
 public sealed record MixRequest(IReadOnlyList<AudioClip> Clips, string OutputPath, TimeSpan Duration,
     int SampleRate = 48000, int Channels = 2, bool ProtectPeaks = true);
 
-public sealed record MuxOptions(bool CopyVideo = false, bool KeepOriginalAudio = false, string? Subtitles = null, string Language = "es");
+public sealed record MuxOptions(bool CopyVideo = false, bool KeepOriginalAudio = false, string? Subtitles = null, string Language = "es", TimeSpan Start = default, TimeSpan? Duration = null);
 
 public interface IMediaEngine
 {
+    Task EncodeAudioAsync(string input, string output, string format, IProgress<EngineProgress>? progress, CancellationToken ct)
+        => throw new NotSupportedException("Audio encoding is not available.");
     Task<MediaInfo> ProbeAsync(string path, CancellationToken cancellationToken);
     Task ExtractAudioAsync(string input, string output, int sampleRate, int channels,
         IProgress<EngineProgress>? progress, CancellationToken cancellationToken);

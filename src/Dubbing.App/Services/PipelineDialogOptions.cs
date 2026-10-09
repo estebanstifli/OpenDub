@@ -6,6 +6,7 @@ public sealed class PipelineDialogOptions
 {
     public string? OperationTitle { get; init; }
     public Action<Avalonia.Controls.StackPanel>? ConfigureFields { get; init; }
+    public Action? ValidateFields { get; init; }
     public bool Translation { get; init; }
     public string TargetLanguage { get; set; } = "es";
     public string TranslationPrompt { get; set; } = TranslationPrompts.Default;

@@ -7,13 +7,13 @@ namespace Dubbing.Application.Pipeline;
 public sealed class DubRenderService(IMediaEngine media)
 {
     public async Task<string> RenderAsync(DubbingProject project, string directory,
-        IProgress<EngineProgress>? progress, CancellationToken cancellationToken, bool allowDurationMismatch = false)
+        IProgress<EngineProgress>? progress, CancellationToken cancellationToken, bool allowDurationMismatch = false, TimeSpan? start = null, TimeSpan? end = null)
     {
         var source = project.Source ?? throw new InvalidOperationException("Import a video first.");
         if (project.Segments.Count == 0) throw new InvalidOperationException("There are no segments to render.");
-        var clips = await ProjectAudioMix.ClipsAsync(project, directory, true, progress, cancellationToken, allowDurationMismatch: allowDurationMismatch);
+        var clips = await ProjectAudioMix.ClipsAsync(project, directory, true, progress, cancellationToken, allowDurationMismatch: allowDurationMismatch, rangeStart: start, rangeEnd: end);
         string output = Path.Combine(directory, "renders", "dub_track.wav");
-        await ProjectAudioMix.RenderAsync(media, clips, output, source.Duration, source.SampleRate,
+        await ProjectAudioMix.RenderAsync(media, clips, output, (end ?? source.Duration) - (start ?? TimeSpan.Zero), source.SampleRate,
             ProjectAudioMix.Channels(project), progress, cancellationToken);
         return output;
     }

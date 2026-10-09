@@ -12,6 +12,9 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         IProgress<EngineProgress>? progress, CancellationToken cancellationToken, ExportOptions? options = null)
     {
         var source = project.Source ?? throw new InvalidOperationException("Import a video first.");
+        var range = (options ?? new ExportOptions()).Range(source.Duration);
+        bool partial = range.Start != TimeSpan.Zero || range.End != source.Duration;
+        if (options?.Profile == "Audio only" && !ExportOptions.AudioFormats.Contains(options.AudioFormat)) throw new ArgumentException("Unknown audio format.");
         progress?.Report(new(0, "Export · validating source video and destination…"));
         if (await ContentFingerprint.ComputeAsync(source.Path, cancellationToken) != source.Fingerprint)
             throw new InvalidOperationException("The original video has changed since import.");
@@ -21,23 +24,26 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         if (options is not null && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
             throw new IOException("Choose an empty export folder to preserve previous exports.");
         progress?.Report(new(.05, "Export · validating segments and mixing audio…"));
-        var audio = await renderer.RenderAsync(project, directory, new PhaseProgress(progress, .05, .25, "Export audio"), cancellationToken, options?.AllowDurationMismatch == true);
+        var audio = await renderer.RenderAsync(project, directory, new PhaseProgress(progress, .05, .25, "Export audio"), cancellationToken, options?.AllowDurationMismatch == true, range.Start, range.End);
         string finalDestination = destination;
         if (options is not null) destination = Path.Combine(directory, "renders", "export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(destination);
         try
         {
         string subtitles = Path.Combine(destination, "subtitles.srt");
-        await SubtitleExporter.WriteSrtAsync(project, subtitles, cancellationToken);
+        if (options?.Profile != "Audio only") await SubtitleExporter.WriteSrtAsync(project, subtitles, cancellationToken, range.Start, range.End);
         string container = options is null ? project.Settings.ExportContainer : options.Profile == "Recommended MP4" ? "mp4" : "mkv";
         string output = Path.Combine(destination, "dubbed." + container);
         if (options?.Profile is not ("Audio only" or "Editing package"))
         {
-            progress?.Report(new(.30, container == "mp4" ? "Export · encoding MP4 (H.264/AAC)…" : "Export · copying video into MKV…"));
-            await media.MuxAsync(source.Path, audio, output, new(CopyVideo: container == "mkv", KeepOriginalAudio: options?.KeepOriginalAudio == true,
-                Subtitles: options?.EmbedSubtitles == true ? subtitles : null, Language: project.Settings.TargetLanguage), new PhaseProgress(progress, .30, .55, "Export video"), cancellationToken);
+            progress?.Report(new(.30, container == "mp4" || partial ? "Export · encoding selected video (H.264/AAC)…" : "Export · copying video into MKV…"));
+            await media.MuxAsync(source.Path, audio, output, new(CopyVideo: container == "mkv" && !partial, KeepOriginalAudio: options?.KeepOriginalAudio == true,
+                Subtitles: options?.EmbedSubtitles == true ? subtitles : null, Language: project.Settings.TargetLanguage, Start: range.Start, Duration: range.End - range.Start), new PhaseProgress(progress, .30, .55, "Export video"), cancellationToken);
         }
-        if (Path.GetFullPath(audio) != Path.Combine(destination, "dub_track.wav")) File.Copy(audio, Path.Combine(destination, "dub_track.wav"), true);
+        if (options?.Profile == "Audio only")
+            await media.EncodeAudioAsync(audio, Path.Combine(destination, "dub_track." + options.AudioFormat.ToLowerInvariant()), options.AudioFormat,
+                new PhaseProgress(progress, .30, .55, "Export " + options.AudioFormat), cancellationToken);
+        else if (Path.GetFullPath(audio) != Path.Combine(destination, "dub_track.wav")) File.Copy(audio, Path.Combine(destination, "dub_track.wav"), true);
         if (options?.Profile == "Editing package")
         {
             int stemNumber = 0;
@@ -45,13 +51,13 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
             {
                 if (audition == AudioAudition.Background && !project.Stems.Keys.Any(ProjectAudioMix.IsBackground)) continue;
                 var stemProgress = new PhaseProgress(progress, .30 + stemNumber++ * .275, .275, "Export " + name);
-                var clips = await ProjectAudioMix.ClipsAsync(project, directory, true, stemProgress, cancellationToken, audition, allowDurationMismatch: options.AllowDurationMismatch);
-                await ProjectAudioMix.RenderAsync(media, clips, Path.Combine(destination, name), source.Duration, source.SampleRate, ProjectAudioMix.Channels(project), stemProgress, cancellationToken);
+                var clips = await ProjectAudioMix.ClipsAsync(project, directory, true, stemProgress, cancellationToken, audition, allowDurationMismatch: options.AllowDurationMismatch, rangeStart: range.Start, rangeEnd: range.End);
+                await ProjectAudioMix.RenderAsync(media, clips, Path.Combine(destination, name), range.End - range.Start, source.SampleRate, ProjectAudioMix.Channels(project), stemProgress, cancellationToken);
             }
         }
         project = project with
         {
-            Segments = project.Segments.Select(s => s.ExcludedFromDubbing || project.Settings.DubMuted ||
+            Segments = project.Segments.Select(s => partial || s.ExcludedFromDubbing || project.Settings.DubMuted ||
                 Math.Abs(ProjectAudioMix.EffectiveDuration(s).TotalSeconds / s.TargetDuration.TotalSeconds - 1) > project.Settings.DurationTolerance ? s : s with { Status = SegmentStatus.Ready,
                 DirtyStages = s.DirtyStages.Except([PipelineStage.DurationFit, PipelineStage.Mix, PipelineStage.Mux]).ToArray() }).ToArray()
         };

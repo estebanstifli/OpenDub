@@ -356,5 +356,14 @@
   "Some segments overlap.": "Some segments overlap.",
   "You can play anyway or review the overlapping segments. Ignoring overlaps applies only to this playback.": "You can play anyway or review the overlapping segments. Ignoring overlaps applies only to this playback.",
   "Ignore and play": "Ignore and play",
-  "View overlaps": "View overlaps"
+  "View overlaps": "View overlaps",
+  "Audio format": "Audio format",
+  "Export time": "Export time",
+  "Time range": "Time range",
+  "Start time (HH:MM:SS)": "Start time (HH:MM:SS)",
+  "End time (HH:MM:SS)": "End time (HH:MM:SS)",
+  "The selected range applies to audio, video and subtitles. You can include milliseconds, for example 00:10:05.250.": "The selected range applies to audio, video and subtitles. You can include milliseconds, for example 00:10:05.250.",
+  "Full-length MKV preserves the video stream. MP4 and video ranges use H.264. Audio only exports the selected format; editing packages include WAV stems and SRT subtitles.": "Full-length MKV preserves the video stream. MP4 and video ranges use H.264. Audio only exports the selected format; editing packages include WAV stems and SRT subtitles.",
+  "Choose a time range inside the video, with the end after the start.": "Choose a time range inside the video, with the end after the start.",
+  "Enter a time as HH:MM:SS, optionally with milliseconds.": "Enter a time as HH:MM:SS, optionally with milliseconds."
 }

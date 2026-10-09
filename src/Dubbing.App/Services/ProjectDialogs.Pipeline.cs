@@ -125,6 +125,9 @@ public sealed partial class ProjectDialogs
             if (options.Translation && (options.Engine is null || !options.Languages.Contains(options.TargetLanguage) ||
                 (options.Engine.ProviderId == "ollama" && model?.SelectedItem is not string)))
             { status.Text = text["Choose a language, engine and available model before starting."]; return; }
+            try { options.ValidateFields?.Invoke(); }
+            catch (Exception ex) when (ex is ArgumentException or FormatException)
+            { status.Text = text[ex.Message]; return; }
             fields.IsVisible = false; processing.IsVisible = true; begin.IsVisible = false; backgroundButton.IsVisible = true;
             try { work = Invoke(); await work; if (dialog.IsVisible) dialog.Close(); }
             catch (OperationCanceledException) { if (dialog.IsVisible) dialog.Close(); }

@@ -5,12 +5,16 @@ namespace Dubbing.Application.Pipeline;
 
 public static class SubtitleExporter
 {
-    public static Task WriteSrtAsync(DubbingProject project, string output, CancellationToken ct)
+    public static Task WriteSrtAsync(DubbingProject project, string output, CancellationToken ct, TimeSpan? start = null, TimeSpan? end = null)
     {
         var text = new StringBuilder(); int number = 0;
         foreach (var segment in project.Segments.Where(s => !s.ExcludedFromDubbing).OrderBy(s => s.Start))
         {
-            text.AppendLine((++number).ToString()).AppendLine($"{Format(segment.Start)} --> {Format(segment.End)}")
+            var begin = start ?? TimeSpan.Zero; var finish = end ?? TimeSpan.MaxValue;
+            if (segment.End <= begin || segment.Start >= finish) continue;
+            var from = (segment.Start < begin ? begin : segment.Start) - begin;
+            var to = (segment.End > finish ? finish : segment.End) - begin;
+            text.AppendLine((++number).ToString()).AppendLine($"{Format(from)} --> {Format(to)}")
                 .AppendLine(segment.Translation.Text.Replace("\r", "").Trim()).AppendLine();
         }
         return File.WriteAllTextAsync(output, text.ToString(), new UTF8Encoding(false), ct);

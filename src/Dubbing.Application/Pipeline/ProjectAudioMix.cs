@@ -21,7 +21,8 @@ public static class ProjectAudioMix
         project.AudioTracks.Where(t => t.Role is AudioTrackRole.Background or AudioTrackRole.Music or AudioTrackRole.Effects).Select(t => t.Channels).DefaultIfEmpty(1).Max()), 1, 8);
 
     public static async Task<IReadOnlyList<AudioClip>> ClipsAsync(DubbingProject project, string directory, bool strict,
-        IProgress<EngineProgress>? progress, CancellationToken ct, AudioAudition audition = AudioAudition.Mix, string? segmentId = null, bool allowDurationMismatch = false)
+        IProgress<EngineProgress>? progress, CancellationToken ct, AudioAudition audition = AudioAudition.Mix, string? segmentId = null, bool allowDurationMismatch = false,
+        TimeSpan? rangeStart = null, TimeSpan? rangeEnd = null)
     {
         if (project.AudioTracks.Count > 0 && project.SelectedSourceAudio is null)
             throw new InvalidOperationException("Audio track settings changed. Prepare audio before playback or export.");
@@ -31,6 +32,7 @@ public static class ProjectAudioMix
         if (audition == AudioAudition.Dub || audition == AudioAudition.Mix && !settings.DubMuted)
         foreach (var segment in project.Segments.Where(s => !s.ExcludedFromDubbing && (segmentId is null || s.Id == segmentId)))
         {
+            if (rangeEnd is { } re && segment.Start >= re || rangeStart is { } rs && segment.End <= rs && segment.Start + EffectiveDuration(segment) <= rs) continue;
             int number = project.Segments.ToList().FindIndex(s => s.Id == segment.Id) + 1;
             var speech = EffectiveSpeech(segment);
             string? path = speech is null ? null : Path.Combine(directory, speech.File);
@@ -76,7 +78,17 @@ public static class ProjectAudioMix
             }
             foreach (var stem in backgrounds) clips.Add(new(Path.Combine(directory, stem.Value.Path), TimeSpan.Zero, settings.BackgroundGain));
         }
-        return clips;
+        if (rangeStart is null && rangeEnd is null) return clips;
+        var begin = rangeStart ?? TimeSpan.Zero;
+        var end = rangeEnd ?? project.Source!.Duration;
+        return clips.Where(c => c.Start < end && (c.Limit is null || c.Start + c.Limit > begin)).Select(c =>
+        {
+            var offset = c.Start < begin ? begin - c.Start : TimeSpan.Zero;
+            var start = c.Start > begin ? c.Start : begin;
+            var limit = end - start;
+            if (c.Limit is { } cap && cap - offset < limit) limit = cap - offset;
+            return c with { Start = start - begin, SourceOffset = c.SourceOffset + offset, Limit = limit };
+        }).ToArray();
     }
 
     public static async Task RenderAsync(IMediaEngine media, IReadOnlyList<AudioClip> input, string output, TimeSpan duration,

@@ -73,6 +73,8 @@ public sealed class FFmpegMediaEngine(IProcessRunner runner, IRuntimeLocator loc
         foreach (var clip in request.Clips)
         {
             if (clip.Start < TimeSpan.Zero || !double.IsFinite(clip.Gain) || clip.Gain < 0) throw new ArgumentException("Invalid clip.");
+            if (clip.SourceOffset < TimeSpan.Zero) throw new ArgumentException("Invalid clip offset.");
+            if (clip.SourceOffset > TimeSpan.Zero) arguments.AddRange(["-ss", Seconds(clip.SourceOffset)]);
             arguments.AddRange(["-i", Path.GetFullPath(clip.Path)]);
         }
         var filters = new List<string>();
@@ -100,18 +102,38 @@ public sealed class FFmpegMediaEngine(IProcessRunner runner, IRuntimeLocator loc
         if (extension is not ".mkv" and not ".mp4") throw new ArgumentException("Choose MKV or MP4 export.");
         var info = await ProbeAsync(video, cancellationToken);
         string language = options.Language switch { "es" => "spa", "en" => "eng", "zh" => "zho", "ja" => "jpn", "ar" => "ara", _ => "und" };
-        var args = new List<string> { "-i", Path.GetFullPath(video), "-i", Path.GetFullPath(audio) };
+        var duration = options.Duration ?? info.Duration - options.Start;
+        if (options.Start < TimeSpan.Zero || duration <= TimeSpan.Zero || options.Start + duration > info.Duration) throw new ArgumentException("Invalid export range.");
+        bool copyVideo = options.CopyVideo && options.Start == TimeSpan.Zero && duration == info.Duration;
+        var args = new List<string>();
+        if (options.Start > TimeSpan.Zero) args.AddRange(["-ss", Seconds(options.Start)]);
+        args.AddRange(["-i", Path.GetFullPath(video), "-i", Path.GetFullPath(audio)]);
         if (options.Subtitles is not null) args.AddRange(["-i", Path.GetFullPath(options.Subtitles)]);
         args.AddRange(["-map", "0:v:0", "-map", "1:a:0"]);
         if (options.KeepOriginalAudio) args.AddRange(["-map", "0:a?"]);
         if (options.Subtitles is not null) args.AddRange(["-map", "2:s:0", "-c:s", extension == ".mp4" ? "mov_text" : "srt", "-metadata:s:s:0", "language=" + language]);
-        args.AddRange(["-c:v", options.CopyVideo ? "copy" : "libx264", "-c:a", "aac", "-b:a", "192k",
+        args.AddRange(["-c:v", copyVideo ? "copy" : "libx264", "-c:a", "aac", "-b:a", "192k",
             "-metadata:s:a:0", "title=OpenDub", "-metadata:s:a:0", "language=" + language, "-disposition:a", "0", "-disposition:a:0", "default"]);
-        if (!options.CopyVideo) args.AddRange(["-preset", "medium", "-crf", "18", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", "-pix_fmt", "yuv420p"]);
+        if (!copyVideo) args.AddRange(["-preset", "medium", "-crf", "18", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", "-pix_fmt", "yuv420p"]);
         if (extension == ".mp4") args.AddRange(["-movflags", "+faststart"]);
         args.AddRange(["-f", extension == ".mp4" ? "mp4" : "matroska"]);
-        args.AddRange(["-t", Seconds(info.Duration)]);
-        await WriteMediaAsync(output, args, progress, info.Duration, cancellationToken);
+        args.AddRange(["-t", Seconds(duration)]);
+        await WriteMediaAsync(output, args, progress, duration, cancellationToken);
+    }
+
+    public async Task EncodeAudioAsync(string input, string output, string format, IProgress<EngineProgress>? progress, CancellationToken ct)
+    {
+        var info = await ProbeAsync(input, ct);
+        string[] codec = format switch
+        {
+            "MP3" => ["-c:a", "libmp3lame", "-b:a", "192k", "-ac", "2", "-ar", "48000", "-f", "mp3"],
+            "WAV" => ["-c:a", "pcm_s24le", "-f", "wav"],
+            "FLAC" => ["-c:a", "flac", "-f", "flac"],
+            "M4A" => ["-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-f", "ipod"],
+            "OGG" => ["-c:a", "libvorbis", "-q:a", "5", "-f", "ogg"],
+            _ => throw new ArgumentException("Unknown audio format.")
+        };
+        await WriteMediaAsync(output, new[] { "-i", Path.GetFullPath(input), "-map", "0:a:0", "-vn" }.Concat(codec).ToArray(), progress, info.Duration, ct);
     }
 
     public Task StretchAsync(string input, string output, double rate, CancellationToken cancellationToken)

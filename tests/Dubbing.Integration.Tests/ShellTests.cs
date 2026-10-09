@@ -270,6 +270,26 @@ public sealed class ShellTests
         finally { Directory.Delete(root, true); }
     }
 
+    [AvaloniaFact]
+    public async Task ExportValidationKeepsFieldsEditableUntilRangeIsCorrect()
+    {
+        var owner = new Window(); owner.Show(); int starts = 0; bool valid = false;
+        var options = new PipelineDialogOptions { OperationTitle = "Export", ValidateFields = () =>
+        { if (!valid) throw new FormatException("Enter a time as HH:MM:SS, optionally with milliseconds."); } };
+        try
+        {
+            var pending = new ProjectDialogs(owner).RunPipelineAsync(options, () => { starts++; return Task.CompletedTask; }, () => { });
+            var dialog = owner.OwnedWindows.Single(); dialog.UpdateLayout();
+            var start = dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Tag, "Start"));
+            start.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(0, starts); Assert.True(start.IsVisible); Assert.True(dialog.IsVisible);
+            Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Enter a time as HH:MM:SS, optionally with milliseconds.");
+            valid = true; start.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await pending; Assert.Equal(1, starts);
+        }
+        finally { owner.Close(); }
+    }
+
     [AvaloniaTheory]
     [InlineData(true, "complete", null)]
     [InlineData(true, "background", null)]
