@@ -349,17 +349,28 @@ public sealed class ShellTests
     [AvaloniaFact]
     public async Task PipelineFailureRemainsVisibleUntilClosed()
     {
-        var owner = new Window(); owner.Show();
+        var owner = new Window { DataContext = new { Status = "Working", Progress = 5.0, ActivityText = string.Join("\n", Enumerable.Repeat("Old log entry", 2000)) } }; owner.Show();
+        var entries = new List<string>(); int cancels = 0;
+        void Entry(string message) => entries.Add(message);
+        ActivityJournal.Entry += Entry;
         try
         {
-            var pending = new ProjectDialogs(owner).RunPipelineAsync(new PipelineDialogOptions { SegmentCount = 2 },
-                () => Task.FromException(new InvalidOperationException("Test failure")), () => { });
+            var pending = new ProjectDialogs(owner).RunPipelineAsync(new PipelineDialogOptions { OperationTitle = "Export" },
+                () => Task.FromException(new InvalidOperationException("Test failure")), () => cancels++);
             var dialog = owner.OwnedWindows.Single(); dialog.UpdateLayout();
             dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Tag, "Start")).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            dialog.UpdateLayout();
             Assert.True(dialog.IsVisible); Assert.False(pending.IsCompleted);
-            dialog.Close(); await Assert.ThrowsAsync<InvalidOperationException>(() => pending);
+            Assert.Contains("Operation failed: Test failure", entries);
+            var error = dialog.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == "Operation failed: Test failure");
+            var errorPosition = error.TranslatePoint(new Point(0, 0), dialog)!.Value;
+            Assert.InRange(errorPosition.Y, 0, 200); // Always above the independently scrolling log.
+            var log = dialog.GetVisualDescendants().OfType<TextBox>().Single(t => t.IsReadOnly);
+            Assert.InRange(log.Bounds.Height, 100, dialog.Height - 100);
+            dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Tag, "Close")).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => pending); Assert.Equal(0, cancels);
         }
-        finally { owner.Close(); }
+        finally { ActivityJournal.Entry -= Entry; owner.Close(); }
     }
 
     [AvaloniaFact] public async Task SegmentDetailEditsCopyAndCancelsWithoutChangingOriginal()
