@@ -52,6 +52,8 @@ These are **practical recommendations for OpenDub's default GGUF models**, not a
 
 **GPU selection:** Advanced Settings provides Auto / CPU and explicit accelerator choices. Auto checks actual devices and falls back to CPU when no supported GPU is available. An explicitly selected but unavailable backend produces an actionable error instead of silently claiming GPU acceleration. NVIDIA Linux CUDA binaries target Turing or newer GPUs (compute capability 7.5+); Vulkan provides an additional audio inference route for supported NVIDIA/AMD/Intel drivers. macOS uses the bundled Metal runtime on Apple Silicon. Driver support and model support still matter.
 
+See the [GPU validation notes](docs/gpu-validation.md) for measured memory, runtime checks and the limits of testing on WSL and hosted macOS.
+
 ## Getting started
 
 1. **Prepare the models.** On first launch, the setup assistant downloads six pinned models sequentially, shows progress and verifies SHA-256 checksums. Allow approximately **8 GiB** for weights, plus space for the app, media and generated audio. Cancelled downloads can resume; an existing model folder can be reused.
