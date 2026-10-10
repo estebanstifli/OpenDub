@@ -19,7 +19,8 @@ public sealed class AudioRuntimeSelector(IRuntimeLocator locator, IProcessRunner
                 string path = locator.LocateAudio(executable, backend, configured);
                 if (backend != "cpu")
                 {
-                    var result = await runner.RunAsync(new(path, ["--list-devices"], TimeSpan.FromSeconds(20)), ct);
+                    // Metal may compile its embedded shaders during the first probe.
+                    var result = await runner.RunAsync(new(path, ["--list-devices"], TimeSpan.FromSeconds(backend == "metal" ? 60 : 20)), ct);
                     if (result.ExitCode != 0 || !HasDevice(result.StandardOutput, backend, device))
                         throw new EngineException($"audio.cpp {backend} device {device} is unavailable. Check the runtime and GPU driver.");
                     ActivityJournal.Write("audio.cpp · devices: " + result.StandardOutput.Trim());
@@ -33,5 +34,14 @@ public sealed class AudioRuntimeSelector(IRuntimeLocator locator, IProcessRunner
         throw new EngineException("No usable audio.cpp runtime was found.");
     }
     public static bool HasDevice(string output, string backend, int index)
-        => Regex.IsMatch(output, $@"(?im)^\s*{Regex.Escape(backend)}:{index}\s+[^\r\n]*\[(GPU|IGPU)\]\s*$");
+    {
+        // ggml registry names differ from audio.cpp's --backend values.
+        string registry = backend.ToLowerInvariant() switch
+        {
+            "metal" => "(?:MTL|Metal)",
+            "hip" => "(?:ROCm|HIP)",
+            _ => Regex.Escape(backend)
+        };
+        return Regex.IsMatch(output, $@"(?im)^\s*{registry}:{index}\s+[^\r\n]*\[(GPU|IGPU)\]\s*$");
+    }
 }

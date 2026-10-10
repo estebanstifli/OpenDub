@@ -72,6 +72,8 @@ jobs:
           "$server" --version | tee metal-build.txt
           grep -i 'backends:.*metal' metal-build.txt
           "$server" --list-devices | tee metal-devices.txt
+          llama=$(find "$app/runtimes" -name llama-server -type f | head -1)
+          "$llama" --list-devices | tee llama-metal-devices.txt
           # Hosted macOS VMs may not expose a GPU. Report actual devices; do not claim inference.
       - uses: actions/upload-artifact@v4
         with:

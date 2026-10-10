@@ -8,6 +8,8 @@ public sealed class AudioRuntimeSelectorTests
     [Theory]
     [InlineData("CUDA:0 \"RTX 3070\" [GPU]", "cuda", 0, true)]
     [InlineData("Metal:0 \"Apple M2\" [IGPU]", "metal", 0, true)]
+    [InlineData("MTL:0 \"Apple Paravirtual device\" [GPU]", "metal", 0, true)]
+    [InlineData("ROCm:0 \"AMD Radeon\" [GPU]", "hip", 0, true)]
     [InlineData("Vulkan:0 \"llvmpipe\" [CPU]", "vulkan", 0, false)]
     [InlineData("select with: --backend <cuda|metal|cpu>", "cuda", 0, false)]
     [InlineData("CUDA:1 \"RTX\" [GPU]", "cuda", 0, false)]
