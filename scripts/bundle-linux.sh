@@ -40,6 +40,12 @@ fi
 echo "$hash  $tool" | sha256sum -c
 chmod +x "$tool"
 export APPIMAGE_EXTRACT_AND_RUN=1
+# The CUDA engines share these redistributables. Make them visible while
+# linuxdeploy resolves dependencies, just as ProcessRunner does at runtime.
+cuda_libs="$appdir/usr/lib/opendub/runtimes/linux-x64/audio-cuda"
+if [[ -d "$cuda_libs" ]]; then
+    export LD_LIBRARY_PATH="$cuda_libs:${LD_LIBRARY_PATH:-}"
+fi
 "$tool" --appdir "$appdir" --exclude-library "libcuda.so*" --deploy-deps-only "$appdir/usr/lib/opendub" --deploy-deps-only "$appdir/usr/lib/vlc/plugins" --library /usr/lib/x86_64-linux-gnu/libvlc.so.5 --library /usr/lib/x86_64-linux-gnu/libvlccore.so.9 --desktop-file "$appdir/usr/share/applications/opendub.desktop" --icon-file "$appdir/usr/share/icons/hicolor/scalable/apps/opendub.svg" --custom-apprun "$cache/OpenDub-AppRun"
 export OUTPUT="$package.AppImage"
 mkdir -p "$appdir/usr/lib/opendub/licenses/ubuntu"
