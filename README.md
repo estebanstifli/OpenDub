@@ -1,64 +1,156 @@
-# OpenDub 0.1.0
+<div align="center">
 
-Local AI video dubbing for Windows, Linux and macOS Apple Silicon. English UI with JSON localization, editable dialogue, speaker references, synchronized preview and multitrack export.
+# OpenDub
 
-## Download and first run
+**Local AI video dubbing. Your voices, your timeline, your control.**
 
-Download the package for your system from [Releases](https://github.com/estebanstifli/OpenDub/releases). The repository and releases are private during the 0.1.0 preview.
+[![Watch the OpenDub demo](https://img.youtube.com/vi/iYkr_BjH9cE/hqdefault.jpg)](https://www.youtube.com/watch?v=iYkr_BjH9cE)
 
-- **Windows x64:** extract the ZIP into a writable folder and open `OpenDub.exe`. CPU and NVIDIA CUDA engines are included. CUDA requires a compatible NVIDIA driver.
-- **Linux x64:** make the AppImage executable and launch it. Builds target Ubuntu 24.04 or newer compatible desktop environments. The AppImage includes VLC; the development tarball can require system VLC and desktop libraries.
-- **macOS Apple Silicon:** open the DMG and drag `OpenDub.app` into Applications. VLC is included. Preview builds are unsigned unless built with a Developer ID identity; Gatekeeper can block them. Public signing and notarization remain a release prerequisite.
+**[▶ Watch the demo](https://www.youtube.com/watch?v=iYkr_BjH9cE)**
 
-The **Prepare OpenDub** assistant downloads the six pinned models sequentially (about 8 GiB), verifies SHA-256 and checks native executables. Cancelled downloads retain partial files and resume on retry. Choose an existing model folder to reuse verified files. Downloads require internet; dubbing runs locally. Verification does not guarantee enough GPU memory for every workload.
+[![Build and test](https://github.com/estebanstifli/OpenDub/actions/workflows/build.yml/badge.svg)](https://github.com/estebanstifli/OpenDub/actions/workflows/build.yml)
+![Preview](https://img.shields.io/badge/version-0.1.0_preview-blue)
+![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-64748b)
 
-## Workflow
+[Download](https://github.com/estebanstifli/OpenDub/releases) · [Getting started](#getting-started) · [Features](#features) · [Documentation](#documentation) · [Report an issue](https://github.com/estebanstifli/OpenDub/issues)
 
-Use **Auto dub** for video â†’ analysis â†’ translation â†’ speech and fitting â†’ export. Choose languages, dialogue track and export folder, then Start. Checkpoints are saved: fix reported segments in Studio and run Auto dub again to resume. With a project open, Auto dub resumes it. Import another video to start another job. It uses the project engines, defaults to llama.cpp and Qwen3 4B, and exports generated dialogue with available background.
+</div>
 
-For manual work: Import video, review Studio/Segments, Translate, Generate speech, Export. Translation and speech support All or ranges such as `3-5,9,12-15`. Overwrite explicitly replaces results, including manual translations. Inspector changes save after a short pause; invalid times are not saved. Regenerate speech after changing text or speaker settings. Moving a clip preserves its audio; changing its length invalidates duration fitting without synthesizing new speech.
+OpenDub is a desktop studio for translating and dubbing videos with local AI. Separate dialogue from music and effects, identify speakers, translate their lines, and generate new speech using voice and emotion references. Review everything against the video before exporting.
 
-**Play** mixes individual WAVs in small PCM blocks while showing the original video muted. Regenerating a segment does not rebuild a movie-length preview. Mute and volume apply during playback. Overlapping dialogue prompts to limit excess audio (which can cut speech), merge texts and regenerate the combined voice, or keep both voices. Following segments never shift automatically.
+Run the complete workflow with **Auto dub**, or take control of individual segments in **Studio** and **Segments**. Once the models are downloaded, the default dubbing workflow runs on your computer without a cloud inference service.
 
-**Settings** contains language, folders, source copying, defaults and setup. **Advanced** provides engine/model management, backend selection, paths, diagnostics and tuning. Translation supports auto/cpu/cuda/metal, subject to runtime and hardware availability.
+> **Early preview:** OpenDub is under active development. Windows is the most extensively exercised platform; Linux and macOS packages are available for testing. This README describes the current `main` branch. The downloadable 0.1.0 preview predates some recent improvements; consult the release notes for each package.
 
-## Portability
+## Download
 
-Windows includes `portable.mode`: settings/models live in `data/`, projects in `projects/`. Copy these folders when updating to another release directory. Removing the marker switches to user-folder storage. Linux/macOS default to user storage because AppImage mounts and signed application bundles must not be modified. Set `OPENDUB_PORTABLE_DIR` to a writable external folder for portable storage on any platform.
+| Platform | 0.1.0 preview | Start the app |
+| --- | --- | --- |
+| Windows x64 | [Download ZIP](https://github.com/estebanstifli/OpenDub/releases/download/v0.1.0/OpenDub-0.1.0-win-x64.zip) | Extract into a writable folder and open `OpenDub.exe`. |
+| Linux x64 | [Download AppImage](https://github.com/estebanstifli/OpenDub/releases/download/v0.1.0/OpenDub-0.1.0-linux-x64.AppImage) | Make it executable, then launch it. Targets Ubuntu 24.04 or a compatible newer desktop. |
+| macOS Apple Silicon | [Download DMG](https://github.com/estebanstifli/OpenDub/releases/download/v0.1.0/OpenDub-0.1.0-osx-arm64.dmg) | Open the DMG and copy `OpenDub.app` to Applications. |
 
-Imports copy the source video into the project by default. JSON stores a relative source path when inside the project. Existing projects remain readable; reopening a project whose external video moved prompts for the matching source. External voice references and custom executable paths must remain accessible. Nonportable first launch imports legacy DubbingApp settings when available, retaining originals. Internal solution names and `.dubproj` remain compatible.
+Packages include the application runtime, inference tools, FFmpeg and VLC. **No separate .NET SDK, Python environment or compiler is needed to run a package.** AI model weights are downloaded separately. Checksums are available on the [release page](https://github.com/estebanstifli/OpenDub/releases/tag/v0.1.0).
 
-## Segment editing and recent projects
+Windows packages include CPU and NVIDIA CUDA runtimes; CUDA requires a compatible NVIDIA driver. The current Linux inference package uses CPU. macOS acceleration depends on the bundled runtime and model. The macOS preview is unsigned and not notarized, so Gatekeeper may block it.
 
-**Open** shows the ten most recent projects; **Open project…** opens the file browser. The history is stored locally and updated when opening, saving or importing projects.
+## Getting started
 
-Studio and Segments include **Delete segment**, **Merge with next**, and **Split segment**. Delete and merge ask for confirmation. Merge joins the two neighbouring texts using the first speaker; split lets you drag the dividing line on the original waveform, preview each part, edit its texts, or transcribe both parts. Suggested text boundaries are approximate and should be reviewed. Both operations invalidate the old generated speech, so generate new audio afterwards.
+1. **Prepare the models.** On first launch, the setup assistant downloads six pinned models sequentially, shows progress and verifies SHA-256 checksums. Allow approximately **8 GiB** for weights, plus space for the app, media and generated audio. Cancelled downloads can resume; an existing model folder can be reused.
+2. **Import a video.** Choose the dialogue audio track. Enable separation when speech, music and effects are mixed together, or use an available background track.
+3. **Review the dialogue.** Inspect transcription, speaker assignments and timings. Choose the output language and each speaker's voice reference.
+4. **Translate and generate speech.** Process everything or a selection such as `3-5,9,12-15`. Preview the result and regenerate any line that needs work.
+5. **Export.** Save a dubbed video, an audio file or an editing package.
 
-**Create segment** is in the Timeline header and the Segments right panel. Existing segments appear as numbered grey rectangles. Drag the blue selection rectangle or its edges, set exact times, choose a speaker, and enter text or transcribe the selection. Overlapping selections turn red and cannot be created; touching boundaries are allowed. Changes are applied only on confirmation. Audio files are retained when deleting a segment. Speech recognition uses the project's transcription engine and the isolated voice track when available; it does not rerun diarization or modify neighbouring segments.
+Prefer a single flow? **Auto dub** runs analysis, translation, speech generation, duration fitting and export, saving checkpoints along the way. With a project open, it resumes that project. Import another video to start a new job.
+
+## Features
+
+### A studio built around dialogue
+
+- **Video and waveform timeline:** synchronized playback, a draggable playhead, zoom, and automatic selection of the current segment.
+- **Independent audio controls:** mute and adjust the original voice, dubbed speech, and available music/effects tracks.
+- **Side-by-side text editing:** original and translated dialogue in the Segments workspace, with video preview and segment actions.
+- **Precise segment tools:** create, split, delete or merge neighbouring segments; drag waveform boundaries and optionally transcribe newly selected audio.
+- **Visible occupied ranges:** existing segments appear in the Create editor, and overlapping new selections are blocked. Adjacent segments may share a boundary.
+- **Overlap review:** compare original and dubbed waveforms, adjust timings or text, merge and regenerate, trim excess audio, or keep the overlap.
+- **Recent projects and activity logs:** reopen the last ten projects and follow progress in resizable logs or operation dialogs.
+
+### Local AI with editable results
+
+- **Speaker-specific voice references:** select a detected segment, adjust its reference range, or provide an external recording.
+- **Voice and emotion conditioning:** use the original speech as an emotion reference while choosing the speaker reference for voice identity.
+- **Local translation choices:** bundled llama.cpp with Qwen3 4B Q4_K_M, or models available through a local Ollama installation.
+- **Editable translation prompts:** add guidance such as regional Spanish or a preferred style before starting a translation pass.
+- **Selective processing:** choose all segments or numbered ranges, with an option to overwrite existing translations or speech.
+- **Duration fitting:** bounded synthesis retries and permitted time stretching help speech fit its slot. Exact timing and voice similarity are not guaranteed.
+- **Simple and advanced settings:** everyday preferences up front; model, runtime, backend and diagnostic controls available in Advanced.
+
+The current IndexTTS2.5 integration supports dubbed speech in **Chinese (`zh`), English (`en`), Japanese (`ja`), Spanish (`es`) and Arabic (`ar`)**. Transcription has its own language support. The interface defaults to English and uses JSON localization files, with Spanish included.
+
+### Fast iteration without rebuilding the whole soundtrack
+
+During playback, OpenDub mixes individual segment WAVs in small PCM blocks alongside the muted source video. Regenerating one segment does **not** rebuild a movie-length preview WAV. A full soundtrack is rendered for export.
+
+Text edits are saved automatically after a short pause. Changing a translation or speaker requires new speech; moving a segment keeps its audio, while changing its length invalidates duration fitting. Following segments never shift automatically. See the [audio segment lifecycle](docs/audio-segment-lifecycle.md) for details.
 
 ## Export
 
-- **Recommended MP4:** H.264 video, AAC audio and optional selectable subtitles.
-- **Preserve video quality (MKV):** copies the original video stream for full-length exports.
-- **Editing package:** dialogue WAV, available background WAV, mix WAV and SRT.
-- **Audio only:** choose MP3 (default, 192 kb/s stereo), WAV (24-bit PCM), FLAC, M4A (AAC) or OGG (Vorbis).
+| Output | What you get |
+| --- | --- |
+| **Recommended MP4** | H.264 video, AAC audio and optional selectable subtitles. |
+| **Preserve video quality (MKV)** | Original video stream copied for full-length exports. |
+| **Audio only** | MP3, WAV, FLAC, M4A or OGG. MP3 defaults to 192 kb/s stereo; WAV uses 24-bit PCM. |
+| **Editing package** | Dialogue WAV, available background WAV, mixed WAV and SRT subtitles. |
 
-**Export time** defaults to All. Select Time range and enter start/end as `HH:MM:SS` (optional milliseconds, e.g. `00:10:05.250`). Audio, video and subtitles are cropped together and start at zero in the exported file; gaps stay silent. Video ranges are re-encoded as H.264 for accurate cuts, including MKV. Segments outside the range do not require generated speech.
+Export the **whole project** or a **time range**, using start/end times such as `00:00:00` to `00:10:05`. Video, audio and subtitles are cropped together and start at zero in the result. Video range exports are re-encoded for accurate cuts, including MKV.
 
-Video profiles can retain original audio as alternative tracks. Export uses timeline mute/gain settings, validates audio/timing and requires an empty destination. Files are prepared before publication; previous exports are preserved. WAV, SRT and render metadata accompany video.
+Exports use the timeline's mute and volume settings. Video profiles can retain original audio as alternative tracks. Progress covers validation, mixing, encoding and publication into an empty destination folder.
 
-Export lists pending segments and timing mismatches, with progress for mixing, encoding and publishing. Export and Auto dub allow duration mismatches by default: WAVs keep their existing starts, allowing silence/overlap within the exported time range. Uncheck the timing option in Export to require strict timing. This never bypasses stale or externally modified audio checks. See [segment audio lifecycle](docs/audio-segment-lifecycle.md).
+**Duration mismatches are allowed by default in Export and Auto dub.** Speech keeps its start position and may overlap the next segment within the exported range; stricter timing remains optional. Missing, stale or externally modified audio still requires attention.
 
-## Build and test
+After export, two highlighted links below the project name open the **exported file** and its **folder**. The destination is remembered when reopening a project; older exports can be discovered in the project's standard output folders.
 
-Use the .NET SDK in `global.json`:
+## AI pipeline
+
+| Stage | Default model / tool | Purpose |
+| --- | --- | --- |
+| Audio preparation | FFmpeg | Inspect tracks, extract audio and prepare media. |
+| Optional source separation | BS-RoFormer | Separate dialogue/vocals from background audio. |
+| Transcription | Qwen3-ASR 0.6B | Recognize speech. |
+| Speaker diarization | Nemotron 3 Diarization | Assign speaker turns. |
+| Forced alignment | Qwen3 Forced Aligner 0.6B | Align recognized words with audio timing. |
+| Translation | Qwen3 4B Q4_K_M via llama.cpp | Translate dialogue; local Ollama is also supported. |
+| Speech generation | IndexTTS2.5 | Generate speech with voice and emotion references. |
+| Timing and export | OpenDub + FFmpeg | Fit durations, mix tracks and encode output. |
+
+Audio models run through **audio.cpp**. During a generation batch, the engine can keep its model resident across requests; process transitions release model memory. Logs expose runtime/backend selection and available GPU diagnostics. Acceleration depends on the selected runtime, model and hardware.
+
+Separation, transcription and diarization can make mistakes, particularly with trailers, loud effects, music and simultaneous speakers. Review detected dialogue and references before a final render. Separation may leave traces of the original voice or remove some background detail; duration fitting is not lip synchronization.
+
+## Projects and portability
+
+- **Windows portable mode:** `portable.mode` keeps settings and models in `data/`, and projects in `projects/` by default. The project folder is configurable in Settings.
+- **Linux and macOS:** default to user storage so read-only AppImages and application bundles remain untouched.
+- **Portable storage on any platform:** set `OPENDUB_PORTABLE_DIR` to a writable folder.
+- **Self-contained projects:** imported source videos are copied into the project by default, with relative paths for internal media. External references and custom runtime paths must remain accessible.
+
+When updating a portable installation, preserve your `data/` and `projects/` folders. Project directories use the `.dubproj` extension. Internal solution and namespace names still use `DubbingApp` / `Dubbing` for compatibility.
+
+## Build from source
+
+Install the .NET SDK specified in [`global.json`](global.json), then:
 
 ```sh
+git clone https://github.com/estebanstifli/OpenDub.git
+cd OpenDub
 dotnet restore DubbingApp.sln --locked-mode
 dotnet test DubbingApp.sln -c Release
 dotnet run --project src/Dubbing.App
 ```
 
-PowerShell 7: `scripts/package.ps1 -Runtime win-x64 -AudioCuda -Archive`. Linux AppImage and macOS DMG require native build hosts. CI builds/tests all three targets and uploads artifacts. AI tests are opt-in; CI never downloads model weights. Set `FFMPEG_TESTS=1` and provide FFmpeg/ffprobe for synthetic media integration tests.
+Native tools and models are also needed for real dubbing; see [packaging and runtime setup](docs/packaging.md). To build a Windows portable archive with PowerShell 7:
 
-See [packaging](docs/packaging.md), [release notes](docs/release-0.1.0.md) and [third-party notices](THIRD-PARTY-NOTICES.md). Application source licensing will be decided before public launch; dependency and model licenses are separate.
+```powershell
+./scripts/package.ps1 -Runtime win-x64 -AudioCuda -Archive
+```
+
+Linux AppImage and macOS DMG packaging use native build hosts. GitHub Actions builds/tests all three targets and produces package artifacts. Default tests do not download model weights. For synthetic media integration tests, set `FFMPEG_TESTS=1` and provide `DUBBING_FFMPEG` and `DUBBING_FFPROBE`. Real AI and playback tests are opt-in.
+
+## Documentation
+
+- [Architecture](docs/architecture.md) and [project format](docs/project-format.md)
+- [Studio](docs/studio.md), [audio tracks](docs/audio-tracks.md) and [transcript review](docs/transcript-review.md)
+- [Segment audio lifecycle](docs/audio-segment-lifecycle.md)
+- [AI engines](docs/engines.md) and [localization](docs/localization.md)
+- [Packaging](docs/packaging.md) and [0.1.0 release notes](docs/release-0.1.0.md)
+
+## Feedback
+
+[Open an issue](https://github.com/estebanstifli/OpenDub/issues) for bugs or suggestions. For a reproducible bug, include your app version, operating system, engine/model, selected backend, steps and the relevant log excerpt. Remove private paths or dialogue from anything you share.
+
+## License and credits
+
+An application source license has **not yet been selected**. Public repository visibility does not mean the project is released under an open-source license. Dependencies and model weights have separate licenses; see [third-party notices](THIRD-PARTY-NOTICES.md) and the model catalog.
+
+Built with Avalonia, .NET, audio.cpp, llama.cpp, FFmpeg, LibVLC and Lucide icons, with AI models from their respective authors.
