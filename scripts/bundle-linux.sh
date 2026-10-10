@@ -55,4 +55,4 @@ for doc in /usr/share/doc/*/copyright; do
     component=$(basename "$(dirname "$doc")")
     cp -L "$doc" "$appdir/usr/lib/opendub/licenses/ubuntu/$component.copyright" 2>/dev/null || true
 done
-"$tool" --appdir "$appdir" --custom-apprun "$cache/OpenDub-AppRun" --output appimage
+"$tool" --appdir "$appdir" --exclude-library "libcuda.so*" --custom-apprun "$cache/OpenDub-AppRun" --output appimage
