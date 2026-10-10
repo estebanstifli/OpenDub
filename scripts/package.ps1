@@ -28,6 +28,10 @@ if (!$SkipRuntimes) { & (Join-Path $PSScriptRoot 'install-runtimes.ps1') -Runtim
 if ($Runtime -eq 'win-x64') { New-Item -ItemType File -Path (Join-Path $output 'portable.mode') -Force | Out-Null }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $package -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'THIRD-PARTY-NOTICES.md') -Destination $package -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination $package -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'licenses') -Destination $package -Recurse -Force
+$revision = (& git -C $projectRoot rev-parse HEAD).Trim()
+@{ version = '0.1.0'; revision = $revision; runtime = $Runtime; builtAtUtc = [DateTime]::UtcNow.ToString('o') } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'build-info.json') -Encoding utf8
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $package -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'DubbingApp_PROJECT_PLAN.md') -Destination $package -Force
 if ($Runtime -eq 'osx-arm64') {

@@ -42,4 +42,11 @@ chmod +x "$tool"
 export APPIMAGE_EXTRACT_AND_RUN=1
 "$tool" --appdir "$appdir" --deploy-deps-only "$appdir/usr/lib/opendub" --deploy-deps-only "$appdir/usr/lib/vlc/plugins" --library /usr/lib/x86_64-linux-gnu/libvlc.so.5 --library /usr/lib/x86_64-linux-gnu/libvlccore.so.9 --desktop-file "$appdir/usr/share/applications/opendub.desktop" --icon-file "$appdir/usr/share/icons/hicolor/scalable/apps/opendub.svg" --custom-apprun "$cache/OpenDub-AppRun"
 export OUTPUT="$package.AppImage"
+mkdir -p "$appdir/usr/lib/opendub/licenses/ubuntu"
+dpkg-query -W -f='${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n' > "$appdir/usr/lib/opendub/licenses/ubuntu/packages.tsv"
+# Retain distro copyright notices, including dependencies copied by linuxdeploy.
+for doc in /usr/share/doc/*/copyright; do
+    component=$(basename "$(dirname "$doc")")
+    cp -L "$doc" "$appdir/usr/lib/opendub/licenses/ubuntu/$component.copyright" 2>/dev/null || true
+done
 "$tool" --appdir "$appdir" --custom-apprun "$cache/OpenDub-AppRun" --output appimage

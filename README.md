@@ -20,7 +20,7 @@ OpenDub is a desktop studio for translating and dubbing videos with local AI. Se
 
 Run the complete workflow with **Auto dub**, or take control of individual segments in **Studio** and **Segments**. Once the models are downloaded, the default dubbing workflow runs on your computer without a cloud inference service.
 
-> **Early preview:** OpenDub is under active development. Windows is the most extensively exercised platform; Linux and macOS packages are available for testing. This README describes the current `main` branch. The downloadable 0.1.0 preview predates some recent improvements; consult the release notes for each package.
+> **Early preview:** OpenDub is under active development. Windows is the most extensively exercised platform; Linux and macOS packages are available for testing. This README describes the current `main` branch. Consult the release notes for the build date and source revision of each package.
 
 ## Download
 
@@ -149,8 +149,29 @@ Linux AppImage and macOS DMG packaging use native build hosts. GitHub Actions bu
 
 [Open an issue](https://github.com/estebanstifli/OpenDub/issues) for bugs or suggestions. For a reproducible bug, include your app version, operating system, engine/model, selected backend, steps and the relevant log excerpt. Remove private paths or dialogue from anything you share.
 
-## License and credits
+## License
 
-An application source license has **not yet been selected**. Public repository visibility does not mean the project is released under an open-source license. Dependencies and model weights have separate licenses; see [third-party notices](THIRD-PARTY-NOTICES.md) and the model catalog.
+OpenDub's original application code is released under the **[MIT License](LICENSE)**. You may use, modify and redistribute it, including commercially, while preserving its copyright and license notice.
 
-Built with Avalonia, .NET, audio.cpp, llama.cpp, FFmpeg, LibVLC and Lucide icons, with AI models from their respective authors.
+This does not relicense bundled libraries, inference runtimes, model weights or media. Those keep their own terms. In particular, IndexTTS uses the bilibili Model Use License, not MIT. See [third-party notices](THIRD-PARTY-NOTICES.md), the [included license texts](licenses/) and [redistribution notes](docs/licensing.md).
+
+## Acknowledgements
+
+OpenDub would not exist without the work of these teams and their communities. Thank you for making local audio and AI tools available:
+
+| Project | Contribution to OpenDub | Upstream license / terms |
+| --- | --- | --- |
+| [audio.cpp](https://github.com/0xShug0/audio.cpp) · ShugoAI | Native audio inference and GGUF model conversions | Apache-2.0 for the pinned runtime; model terms are separate. |
+| [IndexTTS](https://github.com/index-tts/index-tts) · bilibili / IndexTeam | Expressive speech generation and voice references | bilibili Model Use License. |
+| [Qwen3-ASR](https://github.com/QwenLM/Qwen3-ASR) and [Qwen3](https://github.com/QwenLM/Qwen3) · Qwen team | Transcription, forced alignment and translation | Apache-2.0 for the selected models. |
+| [Nemotron 3 Diarization](https://huggingface.co/nvidia/Nemotron-3-Diarization) · NVIDIA | Speaker diarization | OpenMDW-1.1. |
+| [BS-RoFormer implementation](https://github.com/lucidrains/BS-RoFormer) and [audio.cpp model packages](https://huggingface.co/audio-cpp/audio.cpp-gguf) | Source separation research, implementation and converted weights | Implementation MIT; the ep368 checkpoint's original provenance remains unresolved upstream. |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) and [ggml](https://github.com/ggml-org/ggml) | Local LLM inference and tensor computation | MIT. |
+| [Ollama](https://github.com/ollama/ollama) | Optional local translation server | MIT; separately installed models have their own terms. |
+| [FFmpeg](https://github.com/FFmpeg/FFmpeg) | Media inspection, audio processing, mixing and export | LGPL/GPL depending on build; bundled builds can be GPL. |
+| [VLC](https://code.videolan.org/videolan/vlc) and [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) · VideoLAN | Video/audio playback | LGPL-2.1-or-later for the libraries; VLC/plugins include GPL components. |
+| [Avalonia](https://github.com/AvaloniaUI/Avalonia) | Cross-platform desktop UI | MIT. |
+| [.NET](https://github.com/dotnet/runtime) and [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | Application runtime and MVVM | MIT, with third-party runtime notices. |
+| [Lucide](https://github.com/lucide-icons/lucide) / Feather | Interface icons | ISC / MIT notices retained. |
+
+Original authors retain their copyrights and trademarks. Listing a project does not imply its endorsement of OpenDub. Model weights are downloaded separately and are not included in OpenDub release archives.

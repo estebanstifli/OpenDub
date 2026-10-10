@@ -1,0 +1,66 @@
+[
+  {
+    "file": "audio.cpp-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/0xShug0/audio.cpp/v0.9.0/LICENSE"
+  },
+  {
+    "file": "llama.cpp-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/ggml-org/llama.cpp/b11429/LICENSE"
+  },
+  {
+    "file": "IndexTTS-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/index-tts/index-tts/v2.5.0/LICENSE"
+  },
+  {
+    "file": "IndexTTS-LICENSE_ZH.txt",
+    "source": "https://raw.githubusercontent.com/index-tts/index-tts/v2.5.0/LICENSE_ZH.txt"
+  },
+  {
+    "file": "Avalonia-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia/11.3.14/licence.md"
+  },
+  {
+    "file": "CommunityToolkit-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/CommunityToolkit/dotnet/v8.4.0/License.md"
+  },
+  {
+    "file": "dotnet-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/dotnet/runtime/v10.0.0/LICENSE.TXT"
+  },
+  {
+    "file": "dotnet-THIRD-PARTY-NOTICES.txt",
+    "source": "https://raw.githubusercontent.com/dotnet/runtime/v10.0.0/THIRD-PARTY-NOTICES.TXT"
+  },
+  {
+    "file": "Qwen3-LICENSE.txt",
+    "source": "https://huggingface.co/Qwen/Qwen3-4B-GGUF/raw/bc640142c66e1fdd12af0bd68f40445458f3869b/LICENSE"
+  },
+  {
+    "file": "Qwen3-ASR-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/QwenLM/Qwen3-ASR/main/LICENSE"
+  },
+  {
+    "file": "Ollama-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/ollama/ollama/main/LICENSE"
+  },
+  {
+    "file": "LibVLCSharp-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/videolan/libvlcsharp/3.9.5/LICENSE"
+  },
+  {
+    "file": "VLC-COPYING.txt",
+    "source": "https://raw.githubusercontent.com/videolan/vlc/3.0.23/COPYING"
+  },
+  {
+    "file": "VLC-COPYING.LIB.txt",
+    "source": "https://raw.githubusercontent.com/videolan/vlc/3.0.23/COPYING.LIB"
+  },
+  {
+    "file": "OpenMDW-1.1.txt",
+    "source": "https://openmdw.ai/license/1-1/"
+  },
+  {
+    "file": "Lucide-LICENSE.txt",
+    "source": "https://github.com/lucide-icons/lucide/blob/ccb4b193d2680ad2eceb966a129d6bb9c8967014/LICENSE"
+  }
+]
