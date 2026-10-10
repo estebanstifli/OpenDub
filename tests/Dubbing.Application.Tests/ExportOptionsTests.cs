@@ -34,6 +34,7 @@ public class ExportOptionsTests
     [Fact]
     public void DefaultIsEntireDurationAndRangesMustBeInsideSource()
     {
+        Assert.True(new ExportOptions().AllowDurationMismatch);
         Assert.Equal((TimeSpan.Zero, TimeSpan.FromMinutes(10)), new ExportOptions().Range(TimeSpan.FromMinutes(10)));
         Assert.Throws<ArgumentException>(() => new ExportOptions { End = TimeSpan.FromMinutes(11) }.Range(TimeSpan.FromMinutes(10)));
         Assert.Throws<ArgumentException>(() => new ExportOptions { Start = TimeSpan.FromSeconds(-1) }.Range(TimeSpan.FromMinutes(10)));

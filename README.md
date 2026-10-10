@@ -47,7 +47,7 @@ Studio and Segments include **Delete segment**, **Merge with next**, and **Split
 
 Video profiles can retain original audio as alternative tracks. Export uses timeline mute/gain settings, validates audio/timing and requires an empty destination. Files are prepared before publication; previous exports are preserved. WAV, SRT and render metadata accompany video.
 
-Export lists pending segments and timing mismatches, with progress for mixing, encoding and publishing. An explicit timing override can export WAVs at their existing starts, allowing silence/overlap; it never bypasses stale or externally modified audio checks. See [segment audio lifecycle](docs/audio-segment-lifecycle.md).
+Export lists pending segments and timing mismatches, with progress for mixing, encoding and publishing. Export and Auto dub allow duration mismatches by default: WAVs keep their existing starts, allowing silence/overlap within the exported time range. Uncheck the timing option in Export to require strict timing. This never bypasses stale or externally modified audio checks. See [segment audio lifecycle](docs/audio-segment-lifecycle.md).
 
 ## Build and test
 

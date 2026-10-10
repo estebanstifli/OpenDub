@@ -24,7 +24,7 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
         if (options is not null && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
             throw new IOException("Choose an empty export folder to preserve previous exports.");
         progress?.Report(new(.05, "Export · validating segments and mixing audio…"));
-        var audio = await renderer.RenderAsync(project, directory, new PhaseProgress(progress, .05, .25, "Export audio"), cancellationToken, options?.AllowDurationMismatch == true, range.Start, range.End);
+        var audio = await renderer.RenderAsync(project, directory, new PhaseProgress(progress, .05, .25, "Export audio"), cancellationToken, options?.AllowDurationMismatch ?? new ExportOptions().AllowDurationMismatch, range.Start, range.End);
         string finalDestination = destination;
         if (options is not null) destination = Path.Combine(directory, "renders", "export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(destination);

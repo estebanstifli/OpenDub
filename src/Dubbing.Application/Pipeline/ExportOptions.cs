@@ -7,7 +7,7 @@ public sealed record ExportOptions
     public string? Directory { get; init; }
     public bool KeepOriginalAudio { get; init; }
     public bool EmbedSubtitles { get; init; } = true;
-    public bool AllowDurationMismatch { get; init; }
+    public bool AllowDurationMismatch { get; init; } = true;
     public static IReadOnlyList<string> AudioFormats { get; } = ["MP3", "WAV", "FLAC", "M4A", "OGG"];
     public string AudioFormat { get; init; } = "MP3";
     public TimeSpan? Start { get; init; }

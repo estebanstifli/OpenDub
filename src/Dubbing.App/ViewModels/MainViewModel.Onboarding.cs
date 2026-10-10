@@ -102,7 +102,7 @@ public partial class MainViewModel
         if (!await SaveCoreAsync(ct)) return;
         string directory = session.DirectoryPath!;
         string destination = Path.Combine(directory, "exports", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
-        string profile = Settings.DefaultExportProfile; bool original = false, subtitles = true, allowMismatch = false;
+        string profile = Settings.DefaultExportProfile; bool original = false, subtitles = true, allowMismatch = new ExportOptions().AllowDurationMismatch;
         bool allTime = true; string audioFormat = "MP3";
         TextBox? startTime = null, endTime = null;
         var sourceDuration = session.Project.Source.Duration;
@@ -130,7 +130,7 @@ public partial class MainViewModel
             panel.Children.Add(Label(L.Format("Duration mismatches: {0}", mismatches.Length)));
             if (mismatches.Length > 0)
                 panel.Children.Add(Label(L.Format("Review segments: {0}", string.Join(", ", mismatches.Select(x => x.Number)))));
-            var timing = new CheckBox { Content = L["Allow duration mismatches (speech may overlap)"] };
+            var timing = new CheckBox { Content = L["Allow duration mismatches (speech may overlap)"], IsChecked = allowMismatch };
             timing.IsCheckedChanged += (_, _) => allowMismatch = timing.IsChecked == true; panel.Children.Add(timing);
             panel.Children.Add(Label("Keeps each WAV at its segment start without moving later segments or cutting speech. Short clips leave silence; long clips may overlap. Missing, outdated or externally modified audio still blocks export."));
             panel.Children.Add(Label("Export profile"));

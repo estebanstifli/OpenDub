@@ -33,25 +33,25 @@ public sealed class MediaPipelineTests : IDisposable
     }
 
     [FFmpegFact]
-    public async Task Mp4ExportReportsProgressAndRequiresExplicitTimingOverride()
+    public async Task Mp4ExportAllowsLongSpeechByDefaultAndSupportsStrictTiming()
     {
         Directory.CreateDirectory(directory);
         string video = Path.Combine(directory, "odd.mkv"), voice = Path.Combine(directory, "voice.wav");
         var fixture = await runner.RunAsync(new(FFmpeg, ["-v", "error", "-y", "-f", "lavfi", "-i",
             "testsrc=s=161x91:r=10:d=3", "-c:v", "ffv1", video]), default);
         Assert.Equal(0, fixture.ExitCode);
-        await new MockTtsEngine().SynthesizeAsync(new() { Text = "test", Language = "es", OutputPath = voice, TargetDuration = TimeSpan.FromSeconds(1) }, null, default);
-        var audio = new GeneratedSpeech("voice.wav", TimeSpan.FromSeconds(1), "test", await Dubbing.Application.Media.ContentFingerprint.ComputeAsync(voice, default));
+        await new MockTtsEngine().SynthesizeAsync(new() { Text = "test", Language = "es", OutputPath = voice, TargetDuration = TimeSpan.FromSeconds(2) }, null, default);
+        var audio = new GeneratedSpeech("voice.wav", TimeSpan.FromSeconds(2), "test", await Dubbing.Application.Media.ContentFingerprint.ComputeAsync(voice, default));
         var segment = new DubSegment { Start = TimeSpan.FromSeconds(.5), End = TimeSpan.FromSeconds(2),
             Translation = new("es", "Una prueba."), GeneratedSpeech = audio, Status = SegmentStatus.Error, DirtyStages = [] };
         var project = new DubbingProject { Source = new(video, await Dubbing.Application.Media.ContentFingerprint.ComputeAsync(video, default), TimeSpan.FromSeconds(3), 1, 16000), Segments = [segment] };
         var store = new JsonProjectStore(new ProjectJson(), NullLogger<JsonProjectStore>.Instance);
         var export = new ExportVideoService(Media, new DubRenderService(Media), store);
         var options = new ExportOptions { Directory = Path.Combine(directory, "export") };
-        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => export.ExportAsync(project, directory, null, default, options));
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => export.ExportAsync(project, directory, null, default, options with { AllowDurationMismatch = false }));
         Assert.Contains("Segment 1", failure.Message);
         var log = new ProgressLog();
-        var result = await export.ExportAsync(project, directory, log, default, options with { AllowDurationMismatch = true });
+        var result = await export.ExportAsync(project, directory, log, default, options);
         Assert.Equal(SegmentStatus.Error, result.Segments[0].Status); // Exporting does not certify bad timing as fixed.
         var info = await Media.ProbeAsync(Path.Combine(options.Directory, "dubbed.mp4"), default);
         Assert.Contains(info.Streams, s => s.Codec == "h264");
@@ -60,7 +60,10 @@ public sealed class MediaPipelineTests : IDisposable
         Assert.Contains(log.Values, p => p.Message.StartsWith("Export video") && p.Fraction > .30 && p.Fraction < .85);
         Assert.Equal(1, log.Values.Last().Fraction);
         Assert.True(log.Values.Zip(log.Values.Skip(1)).All(p => p.First.Fraction <= p.Second.Fraction));
-        // The timing override must never bypass content-integrity validation.
+        Assert.Contains(log.Values, p => p.Message.Contains("following segments are not moved"));
+        // Callers that omit options also use permissive timing.
+        await export.ExportAsync(project, directory, null, default);
+        // Permissive timing must never bypass content-integrity validation.
         await File.AppendAllTextAsync(voice, "external edit");
         await Assert.ThrowsAsync<InvalidOperationException>(() => export.ExportAsync(project, directory, null, default,
             options with { Directory = Path.Combine(directory, "changed"), AllowDurationMismatch = true }));
