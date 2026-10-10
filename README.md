@@ -14,7 +14,7 @@ The **Prepare OpenDub** assistant downloads the six pinned models sequentially (
 
 ## Workflow
 
-Use **Auto dub** for video → analysis → translation → speech and fitting → export. Choose languages, dialogue track and export folder, then Start. Checkpoints are saved: fix reported segments in Studio and run Auto dub again to resume. With a project open, Auto dub resumes it. Import another video to start another job. It uses the project engines, defaults to llama.cpp and Qwen3 4B, and exports generated dialogue with available background.
+Use **Auto dub** for video â†’ analysis â†’ translation â†’ speech and fitting â†’ export. Choose languages, dialogue track and export folder, then Start. Checkpoints are saved: fix reported segments in Studio and run Auto dub again to resume. With a project open, Auto dub resumes it. Import another video to start another job. It uses the project engines, defaults to llama.cpp and Qwen3 4B, and exports generated dialogue with available background.
 
 For manual work: Import video, review Studio/Segments, Translate, Generate speech, Export. Translation and speech support All or ranges such as `3-5,9,12-15`. Overwrite explicitly replaces results, including manual translations. Inspector changes save after a short pause; invalid times are not saved. Regenerate speech after changing text or speaker settings. Moving a clip preserves its audio; changing its length invalidates duration fitting without synthesizing new speech.
 
@@ -30,11 +30,11 @@ Imports copy the source video into the project by default. JSON stores a relativ
 
 ## Segment editing and recent projects
 
-**Open** shows the ten most recent projects; **Open project�** opens the file browser. The history is stored locally and updated when opening, saving or importing projects.
+**Open** shows the ten most recent projects; **Open project…** opens the file browser. The history is stored locally and updated when opening, saving or importing projects.
 
 Studio and Segments include **Delete segment**, **Merge with next**, and **Split segment**. Delete and merge ask for confirmation. Merge joins the two neighbouring texts using the first speaker; split lets you drag the dividing line on the original waveform, preview each part, edit its texts, or transcribe both parts. Suggested text boundaries are approximate and should be reviewed. Both operations invalidate the old generated speech, so generate new audio afterwards.
 
-**Create segment** is in the Timeline header and the Segments right panel. Drag the selection rectangle or its edges, set exact times, choose a speaker, and enter text or transcribe the selection. Changes are applied only on confirmation. Audio files are retained when deleting a segment. Speech recognition uses the project's transcription engine and the isolated voice track when available; it does not rerun diarization or modify neighbouring segments.
+**Create segment** is in the Timeline header and the Segments right panel. Existing segments appear as numbered grey rectangles. Drag the blue selection rectangle or its edges, set exact times, choose a speaker, and enter text or transcribe the selection. Overlapping selections turn red and cannot be created; touching boundaries are allowed. Changes are applied only on confirmation. Audio files are retained when deleting a segment. Speech recognition uses the project's transcription engine and the isolated voice track when available; it does not rerun diarization or modify neighbouring segments.
 
 ## Export
 

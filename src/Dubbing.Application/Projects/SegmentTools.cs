@@ -34,9 +34,17 @@ public static class SegmentTools
     public static DubbingProject Create(DubbingProject project, TimeSpan start, TimeSpan end, string original, string translation, string? speaker)
     {
         Validate(project, start, end);
+        if (FindCreateOverlaps(project.Segments, start, end).Count > 0)
+            throw new ArgumentException("The new segment overlaps an existing segment. Choose an empty gap.");
         if (speaker is not null && !project.Speakers.Any(s => s.Id == speaker)) throw new ArgumentException("Choose an available speaker.");
         return Replace(project, [], [Fresh(project, new DubSegment { SpeakerId = speaker, Emotion = new() { Mode = EmotionMode.SourceAudio } }, start, end, original, translation)]);
     }
+    // Half-open slots: touching boundaries are valid; even contained ranges are conflicts.
+    // Include excluded segments: their timeline slots still exist and must remain visible.
+    public static IReadOnlyList<int> FindCreateOverlaps(IReadOnlyList<DubSegment> segments, TimeSpan start, TimeSpan end) =>
+        segments.Select((segment, index) => (segment, index)).Where(x => start < x.segment.End && end > x.segment.Start)
+            .Select(x => x.index + 1).ToArray();
+
     public static void Validate(DubbingProject project, TimeSpan start, TimeSpan end)
     {
         if (project.Source is null || start < TimeSpan.Zero || end > project.Source.Duration || end - start < TimeSpan.FromMilliseconds(100))

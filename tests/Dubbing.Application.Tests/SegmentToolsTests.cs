@@ -37,6 +37,28 @@ public class SegmentToolsTests
         var deleted=SegmentTools.Delete(created,"one");Assert.Equal(2,deleted.Segments.Count);Assert.Null(deleted.Speakers[0].VoiceReferenceSegmentId);Assert.Equal("ref.wav",deleted.Speakers[0].VoiceReference!.Path);
         Assert.Throws<ArgumentException>(()=>SegmentTools.Create(p,TimeSpan.FromSeconds(19),TimeSpan.FromSeconds(21),"Hi","",null));
     }
+    [Theory]
+    [InlineData(0,1,false)]
+    [InlineData(8,9,false)]
+    [InlineData(.9,1.1,true)]
+    [InlineData(2,3,true)]
+    [InlineData(0,9,true)]
+    [InlineData(4.9,5.1,true)]
+    [InlineData(7.999,9,true)]
+    public void CreationBlocksAnyIntersectionButAllowsSharedBoundaries(double start, double end, bool blocked)
+    {
+        var project=Project(); var a=TimeSpan.FromSeconds(start); var b=TimeSpan.FromSeconds(end);
+        if(blocked) Assert.Throws<ArgumentException>(()=>SegmentTools.Create(project,a,b,"Hello","",null));
+        else Assert.Equal(3,SegmentTools.Create(project,a,b,"Hello","",null).Segments.Count);
+        Assert.Equal(2,project.Segments.Count);
+    }
+    [Fact] public void ExcludedSegmentStillReservesItsSlot()
+    {
+        var project=Project(); project=project with { Segments=project.Segments.Select(s=>s with { ExcludedFromDubbing=true }).ToArray() };
+        Assert.Equal(new[]{1},SegmentTools.FindCreateOverlaps(project.Segments,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(3)));
+        Assert.Throws<ArgumentException>(()=>SegmentTools.Create(project,TimeSpan.FromSeconds(2),TimeSpan.FromSeconds(3),"Hello","",null));
+    }
+
     [Fact] public async Task RecentProjectsPersistTenUniqueEntriesMostRecentFirst()
     {
         string root=Path.Combine(Path.GetTempPath(),"opendub-recent-"+Guid.NewGuid());Directory.CreateDirectory(root);

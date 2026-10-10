@@ -91,7 +91,7 @@ public partial class MainViewModel
             }
             var result=await dialogs.EditSegmentRangeAsync(new(split,duration,peaks,
                 new(start,end,point,original.Item1,original.Item2,translated.Item1,translated.Item2,old?.SpeakerId ?? project.Segments.FirstOrDefault(s=>s.Id==SelectedSegment?.Id)?.SpeakerId),
-                project.Speakers,Transcribe,Preview,()=>StopRequested?.Invoke()),ct);
+                project.Speakers,Transcribe,Preview,()=>StopRequested?.Invoke(),project.Segments),ct);
             ct.ThrowIfCancellationRequested(); if(result is null) return;
             var changed=split ? SegmentTools.Split(project,old!.Id,TimeSpan.FromSeconds(result.Split),result.First,result.Second,result.FirstTranslation,result.SecondTranslation)
                 : SegmentTools.Create(project,TimeSpan.FromSeconds(result.Start),TimeSpan.FromSeconds(result.End),result.First,result.FirstTranslation,result.SpeakerId);

@@ -397,5 +397,8 @@
   "Play second part": "Play second part",
   "Enter or transcribe the original text for each part.": "Enter or transcribe the original text for each part.",
   "There is no next segment to merge.": "There is no next segment to merge.",
-  "Choose an available speaker.": "Choose an available speaker."
+  "Choose an available speaker.": "Choose an available speaker.",
+  "The new segment overlaps an existing segment. Choose an empty gap.": "The new segment overlaps an existing segment. Choose an empty gap.",
+  "Overlaps segments: {0}. Move or resize the selection into an empty gap.": "Overlaps segments: {0}. Move or resize the selection into an empty gap.",
+  "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.": "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap."
 }

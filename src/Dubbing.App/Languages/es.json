@@ -304,5 +304,8 @@
   "Play second part": "Escuchar segunda parte",
   "Enter or transcribe the original text for each part.": "Escribe o transcribe el texto original de cada parte.",
   "There is no next segment to merge.": "No hay un segmento siguiente para unir.",
-  "Choose an available speaker.": "Elige un hablante disponible."
+  "Choose an available speaker.": "Elige un hablante disponible.",
+  "The new segment overlaps an existing segment. Choose an empty gap.": "El nuevo segmento se solapa con uno existente. Elige un hueco libre.",
+  "Overlaps segments: {0}. Move or resize the selection into an empty gap.": "Se solapa con los segmentos: {0}. Mueve o ajusta la selección a un hueco libre.",
+  "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.": "Rectángulos grises: segmentos existentes. Azul: nueva selección. Rojo: solapamiento. Crea solo en un hueco libre."
 }
