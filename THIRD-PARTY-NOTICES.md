@@ -33,3 +33,6 @@ OpenDub uses separately downloaded upstream GGUF conversions; it does not train 
 ## Included texts and source references
 
 The `licenses/` directory contains upstream license texts and a `sources.json` provenance list. Native archives retain their own additional notices. See `docs/licensing.md` for redistribution duties and remaining provenance limitations. Credits alone are not a substitute for license texts or corresponding source obligations.
+
+
+Linux CUDA audio builds use unmodified audio.cpp 0.9.0 sources with the build options in `scripts/audio-linux-cuda.Dockerfile`. The pinned NVIDIA CUDA 12.8.1 container supplies redistributed cudart, cuBLAS and cuFFT libraries; its EULA is copied into the CUDA runtime's `licenses/` directory. llama.cpp CUDA 12.8 and audio.cpp Vulkan archives are pinned in `runtimes/versions.json`. Host GPU drivers are not distributed.

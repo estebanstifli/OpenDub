@@ -193,6 +193,15 @@
         "name": "llama-b11429-bin-ubuntu-cuda-12.8-x64.tar.gz",
         "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-ubuntu-cuda-12.8-x64.tar.gz"
       }
+    ],
+    "linux-x64-cuda-extra": [
+      {
+        "component": "audio-cuda-extra",
+        "size": 39254836,
+        "sha256": "81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88",
+        "name": "nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl"
+      }
     ]
   }
 }

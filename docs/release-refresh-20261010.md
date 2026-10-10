@@ -1,6 +1,6 @@
 # OpenDub 0.1.0 — refreshed early preview (2026-10-10)
 
-All three application packages are rebuilt from commit **c53998470c169a8c79e5957f93e673741e074425**. Each includes `build-info.json` identifying its exact source revision. The original `v0.1.0` tag is retained; use the attached `OpenDub-source-c539984.zip` for the source matching these refreshed binaries.
+All three application packages are rebuilt from commit **__REVISION__**. Each includes `build-info.json` identifying its exact source revision. The original `v0.1.0` tag is retained; use the attached `OpenDub-source-__SHORT__.zip` for the source matching these refreshed binaries.
 
 ## Included improvements
 
@@ -11,11 +11,12 @@ All three application packages are rebuilt from commit **c53998470c169a8c79e5957
 - Duration mismatches allowed by default in Export and Auto dub; stale or invalid audio is still checked.
 - Project header links to the last exported file and its folder, including previous standard-folder exports.
 - MIT license for OpenDub code, upstream acknowledgements, included license texts and build provenance.
+- Hardware recommendations in the README, GPU device probing with CPU fallback, and Linux CUDA/Vulkan support. Apple Silicon packages include Metal audio and translation.
 
 ## Downloads
 
 - Windows x64: extract the ZIP into a writable folder, then open `OpenDub.exe`. CPU and NVIDIA CUDA runtimes included; compatible drivers required.
-- Linux x64: make the AppImage executable. Ubuntu 24.04 or a compatible newer desktop; current inference runtime uses CPU.
+- Linux x64: make the AppImage executable. Ubuntu 24.04 or a compatible newer desktop; CPU, NVIDIA CUDA 12.8 and Vulkan audio runtimes are included, with CUDA translation.
 - macOS Apple Silicon: open the DMG and copy OpenDub.app to Applications. This preview is unsigned and not notarized; Gatekeeper may block it.
 
 The setup assistant downloads the AI models separately (approximately 8 GiB). Existing users should preserve their `data/` and `projects/` folders or point Settings at their existing folders. Release packages contain no user projects, personal settings or model weights.

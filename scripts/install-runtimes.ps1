@@ -19,7 +19,7 @@ if ($AudioCuda) {
 }
 if ($Runtime -eq 'linux-x64') {
     $assets += $manifest.accelerators['linux-x64-vulkan']
-    if ($LinuxCudaRuntime) { $assets += $manifest.accelerators['linux-x64-llama-cuda'] }
+    if ($LinuxCudaRuntime) { $assets += $manifest.accelerators['linux-x64-llama-cuda']; $assets += $manifest.accelerators['linux-x64-cuda-extra'] }
 }
 foreach ($asset in $assets) {
     $download = Join-Path $cache $asset.name
@@ -31,7 +31,14 @@ foreach ($asset in $assets) {
         }
         Move-Item -LiteralPath $temporary -Destination $download -Force
     }
-    if ($asset.component -in @('audio','audio-cuda','audio-vulkan','llama','llama-cuda')) {
+    if ($asset.component -eq 'audio-cuda-extra') {
+        $target = Join-Path $runtimeRoot 'audio-cuda'
+        $wheel = Join-Path $target 'licenses/nvidia-nvjitlink'
+        [IO.Compression.ZipFile]::ExtractToDirectory($download, $wheel, $true)
+        Get-ChildItem -LiteralPath $wheel -Recurse -File -Filter 'libnvJitLink.so*' | ForEach-Object {
+            Move-Item -LiteralPath $_.FullName -Destination (Join-Path $target $_.Name) -Force
+        }
+    } elseif ($asset.component -in @('audio','audio-cuda','audio-vulkan','llama','llama-cuda')) {
         $target = Join-Path $runtimeRoot $asset.component
         New-Item -ItemType Directory -Force -Path $target | Out-Null
         if ($asset.name.EndsWith('.zip')) { Expand-Archive -LiteralPath $download -DestinationPath $target -Force }
@@ -49,7 +56,9 @@ foreach ($asset in $assets) {
 }
 if ($LinuxCudaRuntime) {
     if ($Runtime -ne 'linux-x64' -or !(Test-Path -LiteralPath (Join-Path $LinuxCudaRuntime 'audiocpp_cli'))) { throw 'Invalid Linux CUDA runtime.' }
-    Copy-Item -LiteralPath $LinuxCudaRuntime -Destination (Join-Path $runtimeRoot 'audio-cuda') -Recurse -Force
+    $cudaTarget = Join-Path $runtimeRoot 'audio-cuda'
+    New-Item -ItemType Directory -Force -Path $cudaTarget | Out-Null
+    Get-ChildItem -LiteralPath $LinuxCudaRuntime | Copy-Item -Destination $cudaTarget -Recurse -Force
 }
 if (!$IsWindows) {
     Get-ChildItem -LiteralPath $runtimeRoot -File -Recurse | Where-Object { $_.Name -match '^(audiocpp_|llama-|ffmpeg$|ffprobe$)' } | ForEach-Object { & chmod +x $_.FullName }

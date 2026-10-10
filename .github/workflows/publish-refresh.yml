@@ -76,5 +76,6 @@ jobs:
           REVISION: ${{ inputs.revision }}
         run: |
           gh release upload v0.1.0 release/* --clobber
-          gh release edit v0.1.0 --title 'OpenDub 0.1.0 · Refreshed preview' --notes-file docs/release-refresh-20261010.md
+          sed -e "s/__REVISION__/$REVISION/g" -e "s/__SHORT__/${REVISION:0:7}/g" docs/release-refresh-20261010.md > release-notes.md
+          gh release edit v0.1.0 --title 'OpenDub 0.1.0 · Refreshed preview' --notes-file release-notes.md
           gh release view v0.1.0 --json assets,url

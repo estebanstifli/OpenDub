@@ -6,13 +6,18 @@ on:
         type: choice
         options: [all, linux, macos, windows]
         default: all
+      cuda_run_id:
+        description: 'Reuse the pinned Linux CUDA runtime artifact from a successful build run'
+        required: false
+        type: string
   push:
     tags: ['v*']
 permissions:
   contents: read
+  actions: read
 jobs:
   linux-audio-cuda:
-    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'linux'
+    if: (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'linux') && inputs.cuda_run_id == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +51,8 @@ jobs:
         with:
           name: linux-audio-cuda-runtime
           path: artifacts/linux-cuda-runtime
+          run-id: ${{ inputs.cuda_run_id || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Build self-contained package with pinned native tools
         shell: pwsh
         run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}' -Archive -AudioCuda:($IsWindows) -LinuxCudaRuntime $(if ($IsLinux) { Join-Path $PWD 'artifacts/linux-cuda-runtime' } else { '' })
