@@ -11,7 +11,21 @@ on:
 permissions:
   contents: read
 jobs:
+  linux-audio-cuda:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'linux'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned CUDA audio server and CLI
+        run: docker buildx build --file scripts/audio-linux-cuda.Dockerfile --output type=local,dest=artifacts/linux-cuda-runtime scripts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-audio-cuda-runtime
+          path: artifacts/linux-cuda-runtime/
+          retention-days: 7
   package:
+    needs: linux-audio-cuda
+    if: always() && (needs.linux-audio-cuda.result == 'success' || needs.linux-audio-cuda.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -27,9 +41,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libvlc-dev vlc-plugin-base vlc-plugin-video-output libfuse2t64 patchelf libfontconfig1 libice6 libsm6 libx11-6
       - run: dotnet restore DubbingApp.sln --locked-mode
       - run: dotnet test DubbingApp.sln -c Release --no-restore
+      - uses: actions/download-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: linux-audio-cuda-runtime
+          path: artifacts/linux-cuda-runtime
       - name: Build self-contained package with pinned native tools
         shell: pwsh
-        run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}' -Archive -AudioCuda:($IsWindows)
+        run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}' -Archive -AudioCuda:($IsWindows) -LinuxCudaRuntime $(if ($IsLinux) { Join-Path $PWD 'artifacts/linux-cuda-runtime' } else { '' })
       - name: Smoke-test packaged runtimes and bundled VLC
         shell: pwsh
         run: |
@@ -37,6 +56,16 @@ jobs:
           elseif ($IsMacOS) { & ./artifacts/releases/OpenDub-0.1.0-osx-arm64/OpenDub.app/Contents/MacOS/OpenDub --self-check }
           else { $env:APPIMAGE_EXTRACT_AND_RUN='1'; & ./artifacts/releases/OpenDub-0.1.0-linux-x64.AppImage --self-check }
           if ($LASTEXITCODE -ne 0) { throw 'Packaged runtime self-check failed.' }
+      - name: Check macOS Metal runtime capabilities
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app=artifacts/releases/OpenDub-0.1.0-osx-arm64/OpenDub.app/Contents/MacOS
+          server=$(find "$app/runtimes" -name audiocpp_server -type f | head -1)
+          "$server" --version | tee metal-build.txt
+          grep -i 'backends:.*metal' metal-build.txt
+          "$server" --list-devices | tee metal-devices.txt
+          # Hosted macOS VMs may not expose a GPU. Report actual devices; do not claim inference.
       - uses: actions/upload-artifact@v4
         with:
           name: OpenDub-${{ matrix.rid }}

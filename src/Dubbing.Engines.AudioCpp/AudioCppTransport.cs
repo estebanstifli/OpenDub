@@ -23,7 +23,7 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
     private string? verifiedExecutable;
     private string buildInfo = "";
     private string? residentModel;
-    private bool? nvidiaAvailable;
+    private readonly AudioRuntimeSelector runtimeSelector = new(locator, runner);
     public Task<JsonElement> JsonAsync(CatalogModel model, string route, object request, CancellationToken ct) =>
         coordinator.RunAsync("audio.cpp", ReleaseAsync, host.Stop, async () =>
         {
@@ -60,10 +60,11 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
         coordinator.RunAsync("audio.cpp-cli", () => { }, async () =>
         {
             string path = RequireModel(model);
-            string executable = await FindExecutableAsync("audiocpp_cli", settings.Current.AudioCliPath, ct);
+            var selectedRuntime = await runtimeSelector.ResolveAsync("audiocpp_cli", settings.Current.AudioCliPath, settings.Current.Backend, settings.Current.Device, ct);
+            string executable = selectedRuntime.Path;
             var version = await runner.RunAsync(new(executable, ["--version"]), ct);
             RequireVersion(version.StandardOutput);
-            string backend = SelectBackend(version.StandardOutput);
+            string backend = selectedRuntime.Backend;
             ActivityJournal.Write($"audio.cpp CLI · separation · backend={backend} · device={settings.Current.Device}.");
             Directory.CreateDirectory(outputDirectory);
             // The Windows CLI uses narrow file paths. Pass only ASCII relative media paths;
@@ -103,7 +104,8 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
     private async Task<Uri> EnsureAsync(CatalogModel selected, CancellationToken ct, bool forInference = true)
     {
         RequireModel(selected);
-        string executable = await FindExecutableAsync("audiocpp_server", settings.Current.AudioServerPath, ct);
+        var selectedRuntime = await runtimeSelector.ResolveAsync("audiocpp_server", settings.Current.AudioServerPath, settings.Current.Backend, settings.Current.Device, ct);
+        string executable = selectedRuntime.Path;
         if (verifiedExecutable != executable)
         {
             var version = await runner.RunAsync(new(executable, ["--version"]), ct);
@@ -111,7 +113,7 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
         }
         var config = new
         {
-            host = "127.0.0.1", backend = SelectBackend(buildInfo), device = settings.Current.Device,
+            host = "127.0.0.1", backend = selectedRuntime.Backend, device = settings.Current.Device,
             threads = settings.Current.Threads, lazy_load = true, max_loaded_models = 1, ui_management = true, log_request_body = false,
             models = catalog.Models.Where(m => m.Provider == "audio.cpp" && IsInstalled(m))
                 .Select(m => new { id = m.Id, family = m.Family, path = Path.GetFullPath(catalog.ModelPath(m, settings.Current.ModelDirectory)),
@@ -138,24 +140,6 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
         else ActivityJournal.Write($"audio.cpp · reusing resident model {selected.DisplayName}.");
         return endpoint;
     }
-    private async Task<string> FindExecutableAsync(string name, string? configured, CancellationToken ct)
-    {
-        string cpu = locator.Locate(name, configured);
-        if (!string.IsNullOrWhiteSpace(configured) || !OperatingSystem.IsWindows() || settings.Current.Backend is not ("auto" or "cuda")) return cpu;
-        string cuda = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(cpu))!, "audio-cuda", Path.GetFileName(cpu));
-        if (!File.Exists(cuda)) return cpu;
-        if (nvidiaAvailable is null)
-        {
-            try
-            {
-                var gpu = await runner.RunAsync(new(locator.Locate("nvidia-smi"), ["--query-gpu=index,name,memory.total,memory.free", "--format=csv,noheader"], TimeSpan.FromSeconds(5)), ct);
-                nvidiaAvailable = gpu.ExitCode == 0 && !string.IsNullOrWhiteSpace(gpu.StandardOutput);
-                if (nvidiaAvailable.Value) ActivityJournal.Write("NVIDIA GPU (index, name, total/free VRAM): " + gpu.StandardOutput.Trim());
-            }
-            catch (Exception ex) when (ex is FileNotFoundException or TimeoutException or System.ComponentModel.Win32Exception) { nvidiaAvailable = false; }
-        }
-        return nvidiaAvailable == true || settings.Current.Backend == "cuda" ? cuda : cpu;
-    }
     private async Task ReleaseAsync()
     {
         if (host.Endpoint is { } endpoint)
@@ -171,14 +155,6 @@ public sealed class AudioCppTransport(SettingsStore settings, ModelCatalog catal
             { ActivityJournal.Write("audio.cpp · unload could not complete; stopping owned server to release memory."); host.Stop(); }
         }
         residentModel = null;
-    }
-    private string SelectBackend(string buildInfo)
-    {
-        var configured = settings.Current.Backend;
-        var enabled = buildInfo.Split('\n').FirstOrDefault(l => l.StartsWith("backends:", StringComparison.OrdinalIgnoreCase)) ?? "cpu";
-        if (configured == "auto") return new[] { "cuda", "metal", "vulkan", "hip", "cpu" }.First(b => enabled.Contains(b, StringComparison.OrdinalIgnoreCase));
-        if (!enabled.Contains(configured, StringComparison.OrdinalIgnoreCase)) throw new UnsupportedCapabilityException($"This audio.cpp build does not include {configured}.");
-        return configured;
     }
     private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage message, CancellationToken ct)
     {

@@ -3,10 +3,19 @@ using System.Runtime.InteropServices;
 namespace Dubbing.Infrastructure.Processes;
 
 public interface IRuntimeLocator { string Locate(string executable, string? configuredPath = null);
+    string LocateAudio(string executable, string backend, string? configuredPath = null) => Locate(executable, configuredPath);
     string LocateLlamaCuda(string? configuredPath = null) => Locate("llama-server", configuredPath); }
 
 public sealed class RuntimeLocator(string? baseDirectory = null) : IRuntimeLocator
 {
+    public string LocateAudio(string executable, string backend, string? configuredPath = null)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredPath) || backend is "cpu" or "metal") return Locate(executable, configuredPath);
+        string root = Path.Combine(baseDirectory ?? AppContext.BaseDirectory, "runtimes", RuntimeInformation.RuntimeIdentifier, "audio-" + backend);
+        string name = OperatingSystem.IsWindows() ? executable + ".exe" : executable;
+        return Directory.Exists(root) ? Directory.EnumerateFiles(root, name, SearchOption.AllDirectories).FirstOrDefault()
+            ?? throw new FileNotFoundException($"audio.cpp {backend} runtime is not installed.") : throw new FileNotFoundException($"audio.cpp {backend} runtime is not installed.");
+    }
     public string LocateLlamaCuda(string? configuredPath = null)
     {
         if (!string.IsNullOrWhiteSpace(configuredPath)) return Locate("llama-server", configuredPath);

@@ -175,6 +175,24 @@
         "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-win-cuda-12.4-x64.zip",
         "name": "llama-b11429-bin-win-cuda-12.4-x64.zip"
       }
+    ],
+    "linux-x64-vulkan": [
+      {
+        "component": "audio-vulkan",
+        "size": 69363955,
+        "sha256": "ce661a7b39add12e91f1c7cc590d55854a39ec0a2fd04c004b3fed29cb978398",
+        "name": "audio-v0.9.0-bin-ubuntu-x64-vulkan-portable.tar.gz",
+        "url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.0/audio-v0.9.0-bin-ubuntu-x64-vulkan-portable.tar.gz"
+      }
+    ],
+    "linux-x64-llama-cuda": [
+      {
+        "component": "llama-cuda",
+        "size": 171651873,
+        "sha256": "b13c64b9224d3c89d9993945d70cc21177ad00178c21b8d34237e3bc139834f1",
+        "name": "llama-b11429-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11429/llama-b11429-bin-ubuntu-cuda-12.8-x64.tar.gz"
+      }
     ]
   }
 }

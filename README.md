@@ -32,7 +32,25 @@ Run the complete workflow with **Auto dub**, or take control of individual segme
 
 Packages include the application runtime, inference tools, FFmpeg and VLC. **No separate .NET SDK, Python environment or compiler is needed to run a package.** AI model weights are downloaded separately. Checksums are available on the [release page](https://github.com/estebanstifli/OpenDub/releases/tag/v0.1.0).
 
-Windows packages include CPU and NVIDIA CUDA runtimes; CUDA requires a compatible NVIDIA driver. The current Linux inference package uses CPU. macOS acceleration depends on the bundled runtime and model. The macOS preview is unsigned and not notarized, so Gatekeeper may block it.
+Windows packages include CPU and NVIDIA CUDA runtimes; CUDA requires a compatible NVIDIA driver. Linux packages include CPU, CUDA and Vulkan audio runtimes, plus CUDA translation. macOS packages include Metal audio and translation runtimes. The macOS preview is unsigned and not notarized, so Gatekeeper may block it.
+
+## System requirements
+
+These are **practical recommendations for OpenDub's default GGUF models**, not a claim that every workload has a fixed memory requirement. Longer speech, source separation, other running applications and GPU drivers affect peak memory.
+
+| Resource | Practical starting point | Recommended for regular dubbing |
+| --- | --- | --- |
+| Operating system | Windows x64; Ubuntu 24.04 or compatible Linux x64; macOS 14+ on Apple Silicon | Current OS and compatible GPU drivers |
+| CPU | Modern 64-bit processor, 4 cores | 8 or more cores |
+| System RAM (Windows/Linux) | 16 GB | 32 GB or more |
+| NVIDIA GPU for IndexTTS2.5 Q8 | **8 GB VRAM as the recommended minimum**; the development machine uses an RTX 3070 8 GB | 12 GB+ VRAM for more headroom |
+| Apple Silicon memory | 16 GB unified memory as a starting recommendation, not a validated lower bound | 24–32 GB+ unified memory |
+| Storage | At least 20 GB free for app, models and basic working space | SSD with additional space for source videos, stems, temporary WAVs and exports |
+| Network | Required for the initial model downloads (about 8 GiB) | Not needed for the default local dubbing workflow after setup |
+
+**8 GB VRAM is not a universal hard cutoff.** CPU inference is available without a dedicated GPU, but can be substantially slower. Smaller GPUs may run some tasks, yet are not the recommended configuration for the complete IndexTTS workflow. Apple unified memory is shared by the system and GPU and is not equivalent to dedicated VRAM. Close other GPU-heavy applications before generation.
+
+**GPU selection:** Advanced Settings provides Auto / CPU and explicit accelerator choices. Auto checks actual devices and falls back to CPU when no supported GPU is available. An explicitly selected but unavailable backend produces an actionable error instead of silently claiming GPU acceleration. NVIDIA Linux CUDA binaries target Turing or newer GPUs (compute capability 7.5+); Vulkan provides an additional audio inference route for supported NVIDIA/AMD/Intel drivers. macOS uses the bundled Metal runtime on Apple Silicon. Driver support and model support still matter.
 
 ## Getting started
 

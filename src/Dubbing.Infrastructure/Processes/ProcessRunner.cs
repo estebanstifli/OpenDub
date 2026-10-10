@@ -21,7 +21,16 @@ public sealed class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunne
         // over AppImage's shared VLC dependencies inherited from the parent process.
         string directory = Path.GetDirectoryName(start.FileName)!;
         start.Environment.TryGetValue("LD_LIBRARY_PATH", out string? inherited);
-        start.Environment["LD_LIBRARY_PATH"] = directory + (string.IsNullOrEmpty(inherited) ? "" : ":" + inherited);
+        string cudaLibraries = Path.Combine(directory, "..", "audio-cuda");
+        // Linux llama CUDA reuses the CUDA 12.8 libraries shipped with audio.cpp.
+        // Keep its own ggml libraries first; never mix backend ABI versions.
+        if (directory.Contains("llama-cuda", StringComparison.Ordinal))
+        {
+            string? root = directory;
+            while (root is not null && Path.GetFileName(root) != "llama-cuda") root = Path.GetDirectoryName(root);
+            if (root is not null) cudaLibraries = Path.Combine(Path.GetDirectoryName(root)!, "audio-cuda");
+        }
+        start.Environment["LD_LIBRARY_PATH"] = directory + (Directory.Exists(cudaLibraries) ? ":" + cudaLibraries : "") + (string.IsNullOrEmpty(inherited) ? "" : ":" + inherited);
     }
 
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)

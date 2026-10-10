@@ -3,6 +3,7 @@ param(
     [switch]$SkipRuntimes,
     [switch]$Archive,
     [string]$PackageName,
+    [string]$LinuxCudaRuntime,
     [switch]$AudioCuda
 )
 $ErrorActionPreference = 'Stop'
@@ -24,7 +25,7 @@ if (Test-Path -LiteralPath $vlcRoot) {
     if ($Runtime -ne 'win-x64') { Remove-Item -LiteralPath $vlcRoot -Recurse -Force }
     else { foreach ($arch in @('win-x86','win-arm64')) { $unused = Join-Path $vlcRoot $arch; if (Test-Path -LiteralPath $unused) { Remove-Item -LiteralPath $unused -Recurse -Force } } }
 }
-if (!$SkipRuntimes) { & (Join-Path $PSScriptRoot 'install-runtimes.ps1') -Runtime $Runtime -Destination $output -AudioCuda:$AudioCuda }
+if (!$SkipRuntimes) { & (Join-Path $PSScriptRoot 'install-runtimes.ps1') -Runtime $Runtime -Destination $output -AudioCuda:$AudioCuda -LinuxCudaRuntime $LinuxCudaRuntime }
 if ($Runtime -eq 'win-x64') { New-Item -ItemType File -Path (Join-Path $output 'portable.mode') -Force | Out-Null }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $package -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'THIRD-PARTY-NOTICES.md') -Destination $package -Force
