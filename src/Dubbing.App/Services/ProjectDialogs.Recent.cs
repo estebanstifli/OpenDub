@@ -25,7 +25,7 @@ public sealed partial class ProjectDialogs
             button.Click += (_, _) => dialog.Close(path); items.Children.Add(button);
         }
         if (items.Children.Count == 0) items.Children.Add(new TextBlock { Text = text["No recent projects yet."] });
-        var browse = new Button { Content = text["Open project…"] }; var cancel = new Button { Content = text["Cancel"] };
+        var browse = new Button { Content = text["Open projectâ€¦"] }; var cancel = new Button { Content = text["Cancel"] };
         browse.Click += (_, _) => dialog.Close("browse"); cancel.Click += (_, _) => dialog.Close();
         var grid = new Grid { Margin = new(20), RowDefinitions = new("Auto,*,Auto"), RowSpacing = 14 };
         grid.Children.Add(new TextBlock { Text = text["Open recents"], FontSize = 22, FontWeight = FontWeight.SemiBold });
