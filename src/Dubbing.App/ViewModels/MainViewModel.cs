@@ -312,6 +312,7 @@ public partial class MainViewModel : ObservableObject
             var project = session.Project;
             ProjectName = project.Name; SourceLanguage = project.Settings.SourceLanguage; TargetLanguage = project.Settings.TargetLanguage;
             Location = session.DirectoryPath ?? L["Not saved"]; IsDirty = session.IsDirty;
+            ExportedMediaPath = ExportedMedia.Find(session.DirectoryPath, project.LastExportFile);
             Engines.Clear();
             AddEngine(EngineTask.Transcription, L["Transcription"], project.Engines.Transcription);
             AddEngine(EngineTask.Diarization, L["Diarization"], project.Engines.Diarization);

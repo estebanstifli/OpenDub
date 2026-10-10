@@ -307,5 +307,9 @@
   "Choose an available speaker.": "Elige un hablante disponible.",
   "The new segment overlaps an existing segment. Choose an empty gap.": "El nuevo segmento se solapa con uno existente. Elige un hueco libre.",
   "Overlaps segments: {0}. Move or resize the selection into an empty gap.": "Se solapa con los segmentos: {0}. Mueve o ajusta la selección a un hueco libre.",
-  "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.": "Rectángulos grises: segmentos existentes. Azul: nueva selección. Rojo: solapamiento. Crea solo en un hueco libre."
+  "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.": "Rectángulos grises: segmentos existentes. Azul: nueva selección. Rojo: solapamiento. Crea solo en un hueco libre.",
+  "Open exported file": "Abrir archivo exportado",
+  "Open export folder": "Abrir carpeta de exportación",
+  "Exported file is no longer available.": "El archivo exportado ya no está disponible.",
+  "Could not open export.": "No se pudo abrir la exportación."
 }

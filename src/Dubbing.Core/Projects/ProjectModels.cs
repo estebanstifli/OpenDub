@@ -110,6 +110,7 @@ public sealed record SourceAudioTrack(int Index, string Codec, int Channels, int
     AudioTrackRole Role = AudioTrackRole.Ignore);
 public sealed record DubbingProject
 {
+    public string? LastExportFile { get; init; }
     public IReadOnlyList<string> AcceptedOverlaps { get; init; } = [];
     public IReadOnlyList<SourceAudioTrack> AudioTracks { get; init; } = [];
     public AudioReference? SelectedSourceAudio { get; init; }

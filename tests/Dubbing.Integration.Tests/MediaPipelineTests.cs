@@ -52,6 +52,8 @@ public sealed class MediaPipelineTests : IDisposable
         Assert.Contains("Segment 1", failure.Message);
         var log = new ProgressLog();
         var result = await export.ExportAsync(project, directory, log, default, options);
+        Assert.Equal(Path.Combine(options.Directory, "dubbed.mp4"), ExportedMedia.Find(directory, result.LastExportFile));
+        Assert.Equal(result.LastExportFile, (await store.LoadAsync(directory, default)).LastExportFile);
         Assert.Equal(SegmentStatus.Error, result.Segments[0].Status); // Exporting does not certify bad timing as fixed.
         var info = await Media.ProbeAsync(Path.Combine(options.Directory, "dubbed.mp4"), default);
         Assert.Contains(info.Streams, s => s.Codec == "h264");

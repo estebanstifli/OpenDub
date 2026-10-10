@@ -100,6 +100,11 @@ public sealed class ExportVideoService(IMediaEngine media, DubRenderService rend
             }
             finally { if (Directory.Exists(staging)) Directory.Delete(staging, true); }
         }
+        string exportedFile = Path.Combine(finalDestination, options?.Profile == "Audio only"
+            ? "dub_track." + options.AudioFormat.ToLowerInvariant()
+            : options?.Profile == "Editing package" ? "dub_track.wav" : "dubbed." + container);
+        string relativeExport = Path.GetRelativePath(directory, exportedFile);
+        project = project with { LastExportFile = relativeExport.StartsWith(".." + Path.DirectorySeparatorChar) || Path.IsPathRooted(relativeExport) ? exportedFile : relativeExport };
         await store.SaveAsync(project, directory, cancellationToken);
         progress?.Report(new(1, "Export complete."));
         return project;

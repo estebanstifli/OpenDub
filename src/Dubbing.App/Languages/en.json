@@ -400,5 +400,9 @@
   "Choose an available speaker.": "Choose an available speaker.",
   "The new segment overlaps an existing segment. Choose an empty gap.": "The new segment overlaps an existing segment. Choose an empty gap.",
   "Overlaps segments: {0}. Move or resize the selection into an empty gap.": "Overlaps segments: {0}. Move or resize the selection into an empty gap.",
-  "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.": "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap."
+  "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.": "Grey rectangles: existing segments. Blue: new selection. Red: overlap. Create only inside an empty gap.",
+  "Open exported file": "Open exported file",
+  "Open export folder": "Open export folder",
+  "Exported file is no longer available.": "Exported file is no longer available.",
+  "Could not open export.": "Could not open export."
 }
