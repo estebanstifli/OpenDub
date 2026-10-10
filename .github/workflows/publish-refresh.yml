@@ -1,0 +1,80 @@
+name: Publish verified release refresh
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        required: true
+        type: string
+      revision:
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify successful packaging revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          REVISION: ${{ inputs.revision }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('run.json'))
+          assert run['conclusion'] == 'success'
+          assert run['head_sha'] == os.environ['REVISION']
+          assert run['path'] == '.github/workflows/package.yml'
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          path: packages
+      - name: Verify contents and prepare release assets
+        env:
+          REVISION: ${{ inputs.revision }}
+        run: |
+          python3 - <<'PY'
+          import pathlib, json, os, zipfile, tarfile, shutil, hashlib, subprocess
+          root = pathlib.Path('packages'); out = pathlib.Path('release'); out.mkdir()
+          revision = os.environ['REVISION']
+          for rid in ['win-x64','linux-x64','osx-arm64']:
+              archive = next(root.rglob('OpenDub-0.1.0-'+rid+('.zip' if rid=='win-x64' else '.tar.gz')))
+              if rid=='win-x64':
+                  with zipfile.ZipFile(archive) as z:
+                      names=z.namelist(); info=json.loads(z.read(next(n for n in names if n.endswith('/build-info.json'))))
+              else:
+                  with tarfile.open(archive) as z:
+                      names=z.getnames(); info=json.load(z.extractfile(next(n for n in names if n.endswith('/build-info.json'))))
+              assert info['revision']==revision, (rid, info)
+              assert info['runtime']==rid
+              assert any(n.endswith('/LICENSE') for n in names)
+              assert any(n.endswith('/licenses/IndexTTS-LICENSE.txt') for n in names)
+              assert not any('/projects/' in n or n.endswith('/data/settings.json') for n in names)
+              extension={'win-x64':'.zip','linux-x64':'.AppImage','osx-arm64':'.dmg'}[rid]
+              package=next(root.rglob('OpenDub-0.1.0-'+rid+extension))
+              shutil.copy2(package,out/package.name)
+          source=out/('OpenDub-source-'+revision[:7]+'.zip')
+          subprocess.run(['git','archive','--format=zip','--output='+str(source),revision],check=True)
+          sums=[]
+          for path in sorted(out.iterdir()):
+              with path.open('rb') as f: digest=hashlib.file_digest(f,'sha256').hexdigest()
+              sums.append(digest+'  '+path.name)
+          (out/'SHA256SUMS').write_text('\n'.join(sums)+'\n')
+          print('\n'.join(sums))
+          PY
+      - name: Update release assets and notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVISION: ${{ inputs.revision }}
+        run: |
+          gh release upload v0.1.0 release/* --clobber
+          gh release edit v0.1.0 --title 'OpenDub 0.1.0 · Refreshed preview' --notes-file docs/release-refresh-20261010.md
+          gh release view v0.1.0 --json assets,url
