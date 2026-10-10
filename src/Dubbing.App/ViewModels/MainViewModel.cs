@@ -69,7 +69,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnProjectNameChanged(string value) { Edit(p => p with { Name = value }); OnPropertyChanged(nameof(WindowTitle)); }
     partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
-    partial void OnIsBusyChanged(bool value) { OnPropertyChanged(nameof(CanEdit)); GenerateCommand.NotifyCanExecuteChanged(); TranslateCommand.NotifyCanExecuteChanged(); }
+    partial void OnIsBusyChanged(bool value) { NotifySegmentTools(); OnPropertyChanged(nameof(CanEdit)); GenerateCommand.NotifyCanExecuteChanged(); TranslateCommand.NotifyCanExecuteChanged(); }
     partial void OnSourceLanguageChanged(string value) => Edit(p => ProjectEditor.Invalidate(
         p with { Settings = p.Settings with { SourceLanguage = value } }, PipelineStage.Transcription));
     partial void OnTargetLanguageChanged(string value) => Edit(p => ProjectEditor.Invalidate(
@@ -106,7 +106,7 @@ public partial class MainViewModel : ObservableObject
                 session.Update(session.Project with { Source = missing with { Path = replacement } }); await session.SaveAsync(null, ct);
             }
         }
-        Refresh(); await LoadWaveformAsync(ct); Status = L["Project opened."];
+        Refresh(); await LoadWaveformAsync(ct); await RecordRecentAsync(directory, ct); Status = L["Project opened."];
         if (IsOllamaSelected) await LoadOllamaModelsAsync(ct);
     });
 
@@ -118,8 +118,15 @@ public partial class MainViewModel : ObservableObject
         var directory = session.DirectoryPath ?? await dialogs.NewProjectDirectoryAsync(ProjectName);
         if (directory is null) return false;
         await session.SaveAsync(directory, ct);
+        await RecordRecentAsync(directory, ct);
         Location = directory; IsDirty = session.IsDirty; Status = L["Project saved."];
         return true;
+    }
+
+    private async Task RecordRecentAsync(string directory, CancellationToken ct)
+    {
+        try { await dialogs.RecordRecentProjectAsync(directory, ct); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { logger.LogWarning(ex, "Could not update recent projects"); }
     }
 
     private async Task<bool> ResolveUnsavedAsync(CancellationToken ct)
@@ -228,6 +235,7 @@ public partial class MainViewModel : ObservableObject
             input = await CopySourceAsync(input, directory, ct);
             StopPlayback(); session.New(project);
             await session.SaveAsync(directory, ct);
+            await RecordRecentAsync(directory, ct);
             try { await importer.ImportAsync(project, input, directory, ReportProgress(), ct); }
             finally { await session.OpenAsync(directory, CancellationToken.None); Refresh(); }
             await LoadWaveformAsync(ct);
@@ -341,7 +349,7 @@ public partial class MainViewModel : ObservableObject
             UseSourceVoicePerSegment = project.Settings.UseSourceVoicePerSegment;
             OnPropertyChanged(nameof(IsOllamaSelected));
         }
-        finally { refreshing = false; }
+        finally { refreshing = false; NotifySegmentTools(); }
     }
 
     private void AddEngine(EngineTask task, string label, string? id)

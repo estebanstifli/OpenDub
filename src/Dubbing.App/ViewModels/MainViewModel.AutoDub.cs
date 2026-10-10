@@ -54,7 +54,7 @@ public partial class MainViewModel
                 project = project with { Settings = project.Settings with { SourceLanguage = sourceLanguage, TargetLanguage = language, UseSeparation = separate, AnalysisStreamIndex = selected.Index } };
                 var folder = await dialogs.NewProjectDirectoryAsync(project.Name); if (folder is null) return;
                 input = await CopySourceAsync(input, folder, ct);
-                StopPlayback(); session.New(project); await session.SaveAsync(folder, ct);
+                StopPlayback(); session.New(project); await session.SaveAsync(folder, ct); await RecordRecentAsync(folder, ct);
             }
             else if (!await SaveCoreAsync(ct)) return;
             string directory = session.DirectoryPath!;

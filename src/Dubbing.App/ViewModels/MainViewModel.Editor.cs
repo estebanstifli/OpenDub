@@ -47,7 +47,7 @@ public partial class MainViewModel
     partial void OnSelectedSegmentChanged(SegmentViewModel? value)
     {
         foreach (var row in Segments) row.IsActive = row.Id == value?.Id;
-        LoadSegment(); OnPropertyChanged(nameof(SelectedSegmentTitle));
+        LoadSegment(); NotifySegmentTools(); OnPropertyChanged(nameof(SelectedSegmentTitle));
         if (!refreshing && !followingPlayback && session.Project.Segments.FirstOrDefault(s => s.Id == value?.Id) is { } segment)
             Seek(segment.Start.TotalSeconds);
     }

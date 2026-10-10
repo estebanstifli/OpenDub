@@ -23,6 +23,8 @@ public interface IProjectDialogs
     Task RunPipelineAsync(PipelineDialogOptions options, Func<Task> start, Action cancel) => start();
     Task<string?> PickFolderAsync() => Task.FromResult<string?>(null);
     Task<string?> OpenProjectAsync();
+    Task RecordRecentProjectAsync(string directory, CancellationToken ct) => Task.CompletedTask;
+    Task<SegmentRangeEdit?> EditSegmentRangeAsync(SegmentRangeEditorOptions options, CancellationToken ct) => Task.FromResult<SegmentRangeEdit?>(null);
     Task<string?> OpenVideoAsync();
     Task<string?> NewProjectDirectoryAsync(string name);
     Task<UnsavedChoice> ConfirmUnsavedAsync();
@@ -36,7 +38,7 @@ public interface IProjectDialogs
     }
 }
 
-public sealed partial class ProjectDialogs(Window owner, TextCatalog? text = null, Dubbing.Infrastructure.Configuration.SettingsStore? settings = null) : IProjectDialogs
+public sealed partial class ProjectDialogs(Window owner, TextCatalog? text = null, Dubbing.Infrastructure.Configuration.SettingsStore? settings = null, Dubbing.Infrastructure.Projects.RecentProjectStore? recent = null) : IProjectDialogs
 {
     public Task<bool> EditSegmentAsync(Dubbing.App.ViewModels.SegmentDetailViewModel model) => ShowDialogAsync<bool>(new Dubbing.App.SegmentDetailWindow(model, text));
     private async Task<T> ShowDialogAsync<T>(Window dialog)
@@ -174,7 +176,7 @@ public sealed partial class ProjectDialogs(Window owner, TextCatalog? text = nul
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    public async Task<string?> OpenProjectAsync()
+    private async Task<string?> BrowseProjectAsync()
     {
         var files = await owner.StorageProvider.OpenFilePickerAsync(new()
         {
