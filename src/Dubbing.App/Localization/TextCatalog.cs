@@ -24,7 +24,7 @@ public sealed class TextCatalog : INotifyPropertyChanged
     public TextCatalog(string? directory = null)
     {
         this.directory = directory ?? Path.Combine(AppContext.BaseDirectory, "Languages");
-        Load("en");
+        Load("zh");
     }
     public string this[string key] => translated.GetValueOrDefault(key) ?? english.GetValueOrDefault(key) ?? key;
     public string Format(string key, params object?[] values) => string.Format(CultureInfo.CurrentCulture, this[key], values);

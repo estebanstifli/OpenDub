@@ -12,7 +12,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string defaultTargetLanguage = "es";
     [ObservableProperty] private string defaultExportProfile = "Recommended MP4";
     public IReadOnlyList<string> ExportProfiles => Dubbing.Application.Pipeline.ExportOptions.Profiles;
-    [ObservableProperty] private string uiLanguage = "en";
+    [ObservableProperty] private string uiLanguage = "zh";
     [ObservableProperty] private string modelDirectory = "";
     [ObservableProperty] private string projectsDirectory = "";
     [ObservableProperty] private string backend = "auto";

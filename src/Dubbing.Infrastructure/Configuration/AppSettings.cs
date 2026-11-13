@@ -8,7 +8,7 @@ public sealed record AppSettings
     public bool CopySourceVideo { get; init; } = true;
     public string DefaultTargetLanguage { get; init; } = "es";
     public string DefaultExportProfile { get; init; } = "Recommended MP4";
-    public string UiLanguage { get; init; } = "en";
+    public string UiLanguage { get; init; } = "zh";
     public string? ProjectsDirectory { get; init; }
     [System.Text.Json.Serialization.JsonIgnore]
     public string EffectiveProjectsDirectory => Path.GetFullPath(string.IsNullOrWhiteSpace(ProjectsDirectory) ? AppPaths.ProjectsRoot : ProjectsDirectory);
